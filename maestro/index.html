@@ -24,21 +24,20 @@ html{box-sizing:border-box;height:100%}
 body{height:100%;margin:0;background:var(--hall);color:var(--ivory);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;-webkit-tap-highlight-color:transparent}
 #app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 
-.scorebar{background:var(--hall-2);color:var(--ivory);padding-block:6px 2px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--rule)}
+.scorebar{background:var(--hall-2);color:var(--ivory);padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--rule)}
 .scoremeta{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
 .scoremeta .work{font-family:var(--display);font-style:italic;font-size:16px;color:var(--mist);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .scoremeta .bar{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
-#scoreCanvas{display:block;width:100%;height:100px}
 .stat .val.word{font-style:italic;font-size:21px}
 
 .stage{position:relative;min-height:0;overflow:hidden}
 #stageCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
 #call{position:absolute;left:50%;top:20%;transform:translate(-50%,-50%);width:min(92%,640px);text-align:center;pointer-events:none;
   font-family:var(--display);font-style:italic;font-weight:600;font-size:clamp(22px,4.6vw,40px);line-height:1.1;text-wrap:balance;color:var(--ivory);text-shadow:0 2px 18px var(--coat);transition:opacity .25s}
-#tip{position:absolute;left:50%;top:calc(30% + 10px);transform:translateX(-50%);max-width:92%;pointer-events:none;
+#tip{position:absolute;left:50%;top:calc(30% + 12px);transform:translateX(-50%);max-width:92%;pointer-events:none;
   font-size:14px;font-weight:600;letter-spacing:.02em;padding:6px 14px;border-radius:999px;background:var(--hall-2);border:1px solid var(--rule);color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .3s}
 #tip.warn{border-color:var(--warn)} #tip.bad{border-color:var(--bad)} #tip.good{border-color:var(--good)}
-#camWrap{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:12px;width:clamp(96px,20vw,176px);max-width:40%;border:1px solid var(--gold);border-radius:4px;overflow:hidden;background:var(--coat)}
+#camWrap{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:28px;width:clamp(96px,20vw,176px);max-width:40%;border:1px solid var(--gold);border-radius:4px;overflow:hidden;background:var(--coat)}
 #camView{display:block;width:100%;height:auto}
 #camWrap span{position:absolute;left:6px;top:4px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ivory);text-shadow:0 1px 3px var(--coat)}
 
@@ -110,11 +109,10 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
 <div id="app">
   <header class="scorebar">
     <div class="scoremeta"><span class="work" id="workLine">Ode to Joy · Beethoven</span><span class="bar" id="barLine">Bar 1 / 32</span></div>
-    <canvas id="scoreCanvas" aria-label="Beat lane: orbs to beat on, cue bars and hints"></canvas>
   </header>
 
   <main class="stage" id="stage">
-    <canvas id="stageCanvas" aria-label="The orchestra on stage"></canvas>
+    <canvas id="stageCanvas" aria-label="The line to follow with your baton, and the orchestra below it"></canvas>
     <div id="tip" style="opacity:0"></div>
     <div id="call"></div>
     <div id="camWrap" hidden><canvas id="camView" width="160" height="120"></canvas><span>Your camera</span></div>
@@ -141,11 +139,11 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
         <details class="how" open>
           <summary>How to conduct</summary>
           <ol>
-            <li>Watch the lane at the top. Bounce your baton down and up each time an orb reaches the ring. Start on a Ready orb, and the orchestra joins on Go!</li>
-            <li>Big orbs want big, loud beats. Small orbs want small, soft ones.</li>
-            <li>A colored bar that says Lift to Brass means: raise your baton into the brass band above the orchestra and hold it there.</li>
-            <li>Not sure? Copy the ghost baton on stage. It shows when to beat, how big, and where to point.</li>
-            <li>On the last orb, hold the final chord, then beat once more on Cut!</li>
+            <li>Your baton is the ball on the left. Keep it on the gold line as it scrolls in, like Trombone Champ.</li>
+            <li>The line bounces once per beat. The bottom of each bounce is the beat. Start on the Ready bounces, and the orchestra joins on Go!</li>
+            <li>Tall bounces play loud, small bounces play soft. The orchestra follows your speed and size.</li>
+            <li>When the line shoots up into the cue zone with a section's name, reach up with it to bring them in.</li>
+            <li>At the end the line goes flat. Hold still, then dip once on Cut!</li>
           </ol>
         </details>
         <p class="fine">Public-domain scores, played by an orchestra synthesized live in your browser. No recordings, nothing to license. Keyboard works too: <kbd>Space</kbd> beats, <kbd>↑</kbd> <kbd>↓</kbd> louder and softer, <kbd>1</kbd>–<kbd>4</kbd> cue a section.</p>
@@ -424,11 +422,11 @@ function playNote(sec, m, t, dur, vel, det, hold) {
 const G = {
   state:'menu', piece:PIECES[0], mode:'mouse',
   k:0, tGest:0, T:2, rate:2, pos:0, prepT:0, evIdx:0,
-  active:{}, cue:{}, hit:{}, jitter:{}, dwell:[0,0,0,0],
+  active:{}, cue:{}, hit:{}, jitter:{},
   dyn:.35, chaos:0, ibis:[], lastIbi:0, waitingSince:0,
   stats:null, fermataVoices:[], fermataT:0, cutoffScore:0,
   ripples:[], keyLevel:.5, lastTip:0, lastEarly:0,
-  readyT0:0, combo:0, bestCombo:0, points:0, popups:[], hitMarks:[],
+  readyT0:0, combo:0, bestCombo:0, points:0, popups:[],
 };
 const cursor = {x:.5, y:.62, trail:[]};
 const CUE_Y = .3;
@@ -483,19 +481,19 @@ const beatDet = {
 };
 function feed(x, y, t) {
   cursor.x = clamp(x, 0, 1); cursor.y = clamp(y, 0, 1);
-  cursor.trail.push({x:cursor.x, y:cursor.y, t});
-  while (cursor.trail.length > 26) cursor.trail.shift();
+  cursor.trail.push({y:cursor.y, t});
+  while (cursor.trail.length > 400 || (cursor.trail.length && t - cursor.trail[0].t > 1.5)) cursor.trail.shift();
   beatDet.push(cursor.x, cursor.y, t);
 }
 
 /* ---------- Conducting engine ---------- */
 function onBeat(t, amp) {
   const level = clamp((amp - .03) / .3, .06, 1);
-  if (G.state === 'ready') { G.prepT = t; G.state = 'prepped'; G.dyn = level; applyDyn(); say(''); ripple(level, COL.mist); popup('Ready…', 'now beat on Go!', .6); return; }
+  if (G.state === 'ready') { G.prepT = t; G.state = 'prepped'; G.dyn = level; applyDyn(); say(''); ripple(level, COL.mist); popup('Ready…', 'the orchestra joins on Go!', .6); G.trk = 0; G.trkT = 0; return; }
   if (G.state === 'prepped') {
     const ibi = t - G.prepT;
     if (ibi < .25 || ibi > 2.6) { G.prepT = t; ripple(level, COL.mist); return; }
-    judge(t, G.prepT + idealAt(0), idealAt(0), level, DYN[markAt(0).dyn]);
+    judge(t, G.prepT + idealAt(0), idealAt(0), level, DYN[markAt(0).dyn], false);
     G.T = clamp(1 / ibi, .5, 3.5); G.rate = G.T;
     G.state = 'playing'; G.k = 0; G.tGest = t; G.pos = 0; G.lastIbi = ibi; G.ibis = [ibi];
     G.dyn = lerp(G.dyn, level, .6); applyDyn(); say('');
@@ -506,12 +504,13 @@ function onBeat(t, amp) {
 
   const ibi = t - G.tGest;
   if (ibi < .2) return;
-  judge(t, G.tGest + idealAt(G.k + 1), idealAt(G.k + 1), level, DYN[markAt(G.k + 1).dyn]);
+  const j = G.k + 1, isCue = G.piece.cues.some(c => c.b === j);
+  judge(t, G.tGest + idealAt(j), idealAt(j), level, DYN[markAt(j).dyn], isCue);
   const longPause = ibi > 1.8 / G.T;
   G.T = clamp(lerp(G.T, 1 / ibi, longPause ? .2 : .55), .4, 4);
   G.k = Math.min(G.k + 1, Math.floor(G.pos) + 2);
   G.tGest = t;
-  G.dyn = lerp(G.dyn, level, .55); applyDyn();
+  if (!isCue) { G.dyn = lerp(G.dyn, level, .55); applyDyn(); }
 
   // ensemble: irregular or extreme beating makes the players drift apart
   if (!longPause) { G.ibis.push(ibi); if (G.ibis.length > 5) G.ibis.shift(); }
@@ -528,26 +527,31 @@ function onBeat(t, amp) {
 
   if (G.k >= G.piece.length) startFermata(t);
 }
-function ripple(a, col) { G.ripples.push({x:cursor.x, y:cursor.y, t0:nowS(), a, col}); }
+function ripple(a, col) { G.ripples.push({y:cursor.y, t0:nowS(), a, col}); }
 function popup(word, sub, q) { G.popups = [{word, sub, q, t0:nowS()}]; }
-// Rhythm-game judgement: timing against the lane, size against the marked dynamics
-function judge(t, expected, ideal, level, target) {
+// Trombone Champ style judgement: hit the bottom of the bounce on time, and stay on the line on the way
+function judge(t, expected, ideal, level, target, isCue) {
   const e = (t - expected) / ideal, a = Math.abs(e);
-  let word, q;
-  if (a < .12) { word = 'Perfect!'; q = 1; }
-  else if (a < .25) { word = 'Good'; q = .6; }
-  else { word = e < 0 ? 'Early' : 'Late'; q = .2; }
-  const sizeOk = Math.abs(level - target) < .22;
-  G.combo = q >= .6 ? G.combo + 1 : 0;
+  const q = a < .12 ? 1 : a < .25 ? .6 : a < .4 ? .3 : 0;
+  const trk = G.trkT > .05 ? G.trk / G.trkT : q;
+  G.trk = 0; G.trkT = 0;
+  const s = .55 * q + .45 * trk;
+  const word = s >= .85 ? 'Perfecto!' : s >= .65 ? 'Nice!' : s >= .45 ? 'OK' : s >= .25 ? 'Meh' : 'Nasty';
+  G.combo = s >= .45 ? G.combo + 1 : 0;
   G.bestCombo = Math.max(G.bestCombo, G.combo);
   const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
-  G.points += Math.round((q * 100 + (sizeOk ? 40 : 0)) * mult);
-  G.stats.n++; G.stats.timing += q; G.stats.size += sizeOk ? 1 : clamp(1 - Math.abs(level - target) * 2, 0, 1);
-  G.hitMarks.push({t, q});
-  const sub = !sizeOk ? (level < target ? 'Bigger!' : 'Smaller!') : G.combo >= 8 ? `Combo ×${G.combo}` : '';
-  popup(word, sub, q);
-  ripple(level, q >= 1 ? COL.brass : q >= .6 ? COL.winds : COL.bad);
+  G.points += Math.round(s * 150 * mult);
+  G.stats.n++; G.stats.timing += q; G.stats.track += trk;
+  let sub = '';
+  if (q < .6) sub = e < 0 ? 'too early' : 'too late';
+  else if (!isCue && level < target - .22) sub = 'bigger!';
+  else if (!isCue && level > target + .22) sub = 'smaller!';
+  else if (mult > 1) sub = `${mult}× combo`;
+  const grade = s >= .85 ? 1 : s >= .45 ? .6 : .2;
+  popup(word, sub, grade);
+  ripple(level, grade >= 1 ? COL.brass : grade >= .6 ? COL.winds : COL.bad);
 }
+
 function applyDyn() {
   if (!AC) return;
   OUT.dynG.gain.setTargetAtTime(.07 + .93 * Math.pow(G.dyn, 1.35), AC.currentTime, .12);
@@ -557,7 +561,7 @@ function coach(bpm, lo, hi) {
   let msg = null, cls = 'warn';
   if (bpm > hi * 1.4) msg = 'Way too fast! The violinists’ bows are smoking.';
   else if (bpm < lo * .65) msg = 'So slow… the brass are nodding off.';
-  else if (G.chaos > .5) { msg = 'Wobbly! Beat with the orbs to pull the orchestra together.'; cls = 'bad'; }
+  else if (G.chaos > .5) { msg = 'Wobbly! Follow the line to pull the orchestra together.'; cls = 'bad'; }
   if (msg) { tip(msg, cls); G.lastTip = t; }
 }
 
@@ -566,9 +570,10 @@ function startGame() {
   OUT.dynG.gain.cancelScheduledValues(AC.currentTime);
   OUT.dynG.gain.setValueAtTime(.3, AC.currentTime);
   const p = G.piece;
-  Object.assign(G, {state:'ready', k:0, pos:0, evIdx:0, chaos:0, ibis:[], dyn:.35, fermataVoices:[], cutoffScore:0, ripples:[], dwell:[0,0,0,0], lastTip:0,
-    readyT0:nowS() + 1.2, combo:0, bestCombo:0, points:0, popups:[], hitMarks:[]});
-  G.stats = {n:0, timing:0, size:0};
+  Object.assign(G, {state:'ready', k:0, pos:0, evIdx:0, chaos:0, ibis:[], dyn:.35, fermataVoices:[], cutoffScore:0, ripples:[], lastTip:0,
+    readyT0:nowS() + 1.2, combo:0, bestCombo:0, points:0, popups:[]});
+  G.stats = {n:0, timing:0, track:0};
+  G.trk = 0; G.trkT = 0; G.cueDwell = 0;
   G.active = {}; G.cue = {}; G.hit = {};
   for (const s of SECTIONS) { G.active[s.id] = true; G.jitter[s.id] = 0; }
   for (const c of p.cues) { G.active[c.sec] = false; G.cue[c.sec] = {b:c.b, status:'pending'}; }
@@ -576,7 +581,7 @@ function startGame() {
   $('#menu').hidden = true; $('#results').hidden = true; $('#calib').hidden = true;
   $('#stopBtn').hidden = false;
   $('#workLine').textContent = `${p.title} · ${p.composer}`;
-  say('Beat when an orb hits the ring');
+  say('Keep your ball on the line');
   tip('', '');
   try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
   updateHud(true);
@@ -620,8 +625,8 @@ function cueScore() {
 }
 function finalScores() {
   const st = G.stats, n = Math.max(1, st.n);
-  const parts = {timing:st.timing / n, size:st.size / n, cues:cueScore(), cutoff:G.cutoffScore};
-  const total = parts.timing * .45 + parts.size * .3 + parts.cues * .17 + parts.cutoff * .08;
+  const parts = {timing:st.timing / n, track:st.track / n, cues:cueScore(), cutoff:G.cutoffScore};
+  const total = parts.timing * .4 + parts.track * .35 + parts.cues * .17 + parts.cutoff * .08;
   return {parts, total:Math.round(total * 100)};
 }
 function showResults() {
@@ -635,9 +640,9 @@ function showResults() {
     [0,  'D', 'The audience has left', 'Only the ushers remain. One of them is booing.'],
   ];
   const [, g, head, line] = tiers.find(x => total >= x[0]);
-  $('#resWork').textContent = `${G.piece.title} · ${G.points.toLocaleString()} points · best combo ×${G.bestCombo}`;
+  $('#resWork').textContent = `${G.piece.title} · ${Math.round(G.points).toLocaleString()} points · best combo ×${G.bestCombo}`;
   $('#resGrade').textContent = g; $('#resHead').textContent = head; $('#resLine').textContent = line;
-  const rows = [['Timing', parts.timing], ['Beat size', parts.size], ['Cues', parts.cues], ['Final cutoff', parts.cutoff]];
+  const rows = [['Timing', parts.timing], ['On the line', parts.track], ['Cues', parts.cues], ['Final cutoff', parts.cutoff]];
   const box = $('#resRows'); box.textContent = '';
   for (const [label, v] of rows) {
     const r = document.createElement('div'); r.className = 'brow';
@@ -646,39 +651,41 @@ function showResults() {
     box.appendChild(r);
   }
   const TIPS = {
-    timing:'Beat the moment each orb touches the ring. The ghost baton on stage bottoms out right on the beat.',
-    size:'Match your bounce to the orb: tiny orbs, tiny beats; huge orbs, swing big.',
-    cues:'When a Lift bar reaches the ring, raise your baton into that section’s band and hold it for a moment.',
-    cutoff:'Hold the final chord until the Cut! orb reaches the ring, then give one clean beat.',
+    timing:'Land the bottom of each bounce right as it reaches the line on the left.',
+    track:'Keep the ball glued to the line, all the way up and all the way down each bounce.',
+    cues:'When the line shoots up with a section’s name, reach all the way up with it.',
+    cutoff:'Hold still while the line is flat, then dip once on Cut!',
   };
   const worst = Object.entries(parts).sort((a, b) => a[1] - b[1])[0][0];
   $('#resTip').textContent = 'Next time: ' + TIPS[worst];
   $('#results').hidden = false; $('#stopBtn').hidden = true;
 }
 
-/* ---------- Cues: lift into a section's band and hold ---------- */
+/* ---------- Cues: follow the line up into the cue zone ---------- */
 function updateCues(dt, t) {
-  for (const [sec, c] of Object.entries(G.cue)) if (c.status === 'pending' && G.pos > c.b + 2) { c.status = 'missed'; tip(`Missed the ${secName(sec)} cue. Lift into their band to wake them.`, 'bad'); G.lastTip = t; }
-  const inBand = cursor.y < CUE_Y && (G.state === 'playing' || G.state === 'ready' || G.state === 'prepped');
-  const z = clamp(Math.floor(cursor.x * 4), 0, 3);
-  for (let i = 0; i < 4; i++) G.dwell[i] = inBand && i === z ? G.dwell[i] + dt : Math.max(0, G.dwell[i] - dt * 2);
-  if (inBand && G.dwell[z] > .3) tryCue(SECTIONS[z].id, t);
+  if (G.state !== 'playing') return;
+  for (const [sec, c] of Object.entries(G.cue)) if (c.status === 'pending' && G.pos > c.b + 1.5) {
+    c.status = 'missed'; tip(`Missed the ${secName(sec)}! Reach up into the cue zone to wake them.`, 'bad'); G.lastTip = t;
+  }
+  if (cursor.y >= CUE_Y) { G.cueDwell = 0; return; }
+  G.cueDwell += dt;
+  if (G.cueDwell < .06) return;
+  const list = Object.entries(G.cue).filter(([sec]) => !G.active[sec]);
+  const pick = list.find(([, c]) => c.status === 'pending' && G.pos >= c.b - 2.2) || list.find(([, c]) => c.status === 'missed');
+  if (pick) tryCue(pick[0], t);
 }
 function tryCue(sec, t) {
   const c = G.cue[sec];
-  if (!c || G.active[sec]) return;
-  if (G.state !== 'playing') return;
-  if (c.status === 'pending' && G.pos < c.b - 4.5) {
-    if (t - G.lastEarly > 2.5) { tip(`Not yet. The ${secName(sec)} come in at bar ${c.b / G.piece.meter + 1}.`, 'warn'); G.lastEarly = t; G.lastTip = t; }
-    return;
-  }
+  if (!c || G.active[sec] || G.state !== 'playing') return;
+  if (c.status === 'pending' && G.pos < c.b - 2.2) return;
   G.active[sec] = true; G.hit[sec] = t;
   if (c.status === 'missed') { c.status = 'missed-late'; tip(`The ${secName(sec)} wake up, very late.`, 'warn'); }
-  else if (G.pos <= c.b + .3) { c.status = 'hit'; G.points += 500; popup(`${secName(sec, true)} in!`, 'Perfect cue +500', 1); }
+  else if (G.pos <= c.b + .3) { c.status = 'hit'; G.points += 500; popup(`${secName(sec, true)} in!`, 'perfect cue +500', 1); }
   else { c.status = 'late'; G.points += 200; popup(`${secName(sec, true)} in`, 'a bit late +200', .6); }
   G.lastTip = t;
-  G.ripples.push({x:cursor.x, y:cursor.y, t0:t, a:1, col:COL[sec]});
+  G.ripples.push({y:cursor.y, t0:t, a:1, col:COL[sec]});
 }
+
 const secName = (id, cap) => { const n = {strings:'strings', winds:'woodwinds', brass:'brass', timp:'timpani'}[id]; return cap ? n[0].toUpperCase() + n.slice(1) : n; };
 
 /* ---------- Scheduling ---------- */
@@ -826,7 +833,7 @@ const COL = {
 };
 const FD = '"Bodoni Moda","Bodoni 72",Didot,Georgia,serif';
 const FB = '"Schibsted Grotesk",system-ui,sans-serif';
-const stageC = $('#stageCanvas'), scoreC = $('#scoreCanvas');
+const stageC = $('#stageCanvas');
 function fit(cv) {
   const dpr = Math.min(2, window.devicePixelRatio || 1), r = cv.getBoundingClientRect();
   const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
@@ -839,151 +846,224 @@ function alpha(hex, a) {
   return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
 }
 
-function drawStage(t) {
+/* ---------- The line: the path your baton should trace, scrolling in from the right ---------- */
+const BOT = .74, APEX_CUE = .1, HOLD_Y = .5, STRIP_Y = .82;
+const smooth = x => x * x * (3 - 2 * x);
+function topFor(j) {
+  const cu = G.piece.cues.find(c => c.b === j);
+  if (cu && G.state !== 'menu' && !G.active[cu.sec] && G.cue[cu.sec] && G.cue[cu.sec].status === 'pending') return {y:APEX_CUE, sec:cu.sec};
+  return {y:BOT - (.06 + DYN[markAt(clamp(j, 0, G.piece.length)).dyn] * .34), sec:null};
+}
+function pathModel(t) {
+  const p = G.piece, st = G.state, beats = [];
+  let hold = null;
+  if (st === 'menu' || st === 'ready') {
+    const iv = idealAt(0), t0 = st === 'menu' ? t + .9 : G.readyT0;
+    const n0 = Math.floor((t - 2 - t0) / iv);
+    for (let n = n0; n < n0 + 14; n++) beats.push({t:t0 + n * iv, j:0, ready:n >= 0});
+  } else if (st === 'prepped' || st === 'playing') {
+    const clk = laneClock(t);
+    for (let j = clk.k - 4; j <= p.length; j++) { const tt = clk.time(j); beats.push({t:tt, j}); if (tt > t + 4) break; }
+    const last = beats[beats.length - 1];
+    if (last.j === p.length) hold = {from:last.t, to:last.t + 2.5};
+  } else {
+    const iv = idealAt(p.length);
+    for (let j = 4; j >= 0; j--) beats.push({t:G.fermataT - j * iv, j:p.length - j});
+    hold = {from:G.fermataT, to:G.fermataT + 2.5};
+    if (st === 'fermata' && t > hold.to + .3) hold.to = t - .3;
+  }
+  return {beats, hold};
+}
+function yAt(tt, M) {
+  const {beats, hold} = M;
+  if (hold && tt >= hold.from) {
+    const {from, to} = hold;
+    if (tt < from + .45) return lerp(BOT, HOLD_Y, smooth((tt - from) / .45));
+    if (tt < to - .3) return HOLD_Y;
+    if (tt < to) return lerp(HOLD_Y, BOT, smooth((tt - to + .3) / .3));
+    return lerp(BOT, .62, smooth(clamp((tt - to) / .4, 0, 1)));
+  }
+  if (!beats.length || tt <= beats[0].t) return BOT;
+  for (let i = 0; i < beats.length - 1; i++) {
+    const a = beats[i], b = beats[i + 1];
+    if (tt < b.t) return BOT - (BOT - topFor(b.j).y) * Math.sin(Math.PI * (tt - a.t) / Math.max(.05, b.t - a.t));
+  }
+  return BOT;
+}
+
+function drawStage(t, M) {
   const {c, w, h} = fit(stageC);
-  const bg = c.createRadialGradient(w / 2, h * .95, 10, w / 2, h * .7, Math.max(w, h) * .8);
+  const bg = c.createRadialGradient(w * .6, h, 10, w * .6, h * .6, Math.max(w, h) * .9);
   bg.addColorStop(0, COL.floor); bg.addColorStop(1, COL.hall);
   c.fillStyle = bg; c.fillRect(0, 0, w, h);
 
-  // cue band
-  const bandH = h * CUE_Y;
+  const hitX = clamp(w * .14, 56, 150), ahead = 2.8, pps = (w - hitX) / ahead;
+  const X = tt => hitX + (tt - t) * pps;
+  const Y = y => y * h;
+  const lw = clamp(h * .013, 4, 8);
+
+  // cue zone and the beat floor
+  const bandH = Y(CUE_Y);
   const bandG = c.createLinearGradient(0, 0, 0, bandH);
-  bandG.addColorStop(0, alpha(COL.gold, .1)); bandG.addColorStop(1, alpha(COL.gold, .02));
+  bandG.addColorStop(0, alpha(COL.gold, .12)); bandG.addColorStop(1, alpha(COL.gold, .02));
   c.fillStyle = bandG; c.fillRect(0, 0, w, bandH);
-  c.strokeStyle = alpha(COL.gold, .35); c.setLineDash([5, 6]); c.lineWidth = 1;
+  c.strokeStyle = alpha(COL.gold, .3); c.setLineDash([5, 6]); c.lineWidth = 1;
   c.beginPath(); c.moveTo(0, bandH); c.lineTo(w, bandH); c.stroke();
-  for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(i * w / 4, 0); c.lineTo(i * w / 4, bandH); c.stroke(); }
+  c.strokeStyle = alpha(COL.ivory, .12);
+  c.beginPath(); c.moveTo(0, Y(BOT)); c.lineTo(w, Y(BOT)); c.stroke();
   c.setLineDash([]);
-  c.font = `600 10.5px ${FB}`; c.fillStyle = alpha(COL.gold, .6); c.textAlign = 'left';
-  c.fillText('CUE BAND · LIFT AND HOLD', 10, 16);
-  for (let i = 0; i < 4; i++) if (G.dwell[i] > .02 && G.dwell[i] < .3) {
-    c.fillStyle = alpha(COL[SECTIONS[i].id], .25 * G.dwell[i] / .3);
-    c.fillRect(i * w / 4, 0, w / 4, bandH);
+  c.font = `700 10.5px ${FB}`; c.fillStyle = alpha(COL.gold, .65); c.textAlign = 'right';
+  c.fillText('CUE ZONE', w - 12, 18);
+
+  SECTIONS.forEach((s, i) => drawSection(c, i, s, t, w, h));
+
+  // the path: past part faded, future part bright, cue arcs in the section's colour
+  const t0 = t - hitX / pps, t1 = t + ahead + .2, step = 3 / pps;
+  c.lineJoin = c.lineCap = 'round';
+  c.strokeStyle = alpha(COL.gold, .25); c.lineWidth = lw * .7;
+  c.beginPath();
+  for (let tt = t0; tt <= t; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); tt === t0 ? c.moveTo(x, y) : c.lineTo(x, y); }
+  c.stroke();
+  const glowW = lw * 2.6;
+  for (const [width, col] of [[glowW, alpha(COL.gold, .16)], [lw, COL.gold]]) {
+    c.strokeStyle = col; c.lineWidth = width;
+    c.beginPath(); let first = true;
+    for (let tt = t; tt <= t1; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); first ? c.moveTo(x, y) : c.lineTo(x, y); first = false; }
+    c.stroke();
+  }
+  const bs = M.beats;
+  for (let i = 0; i < bs.length - 1; i++) {
+    const top = topFor(bs[i + 1].j);
+    if (!top.sec || bs[i + 1].ready) continue;
+    const a = Math.max(bs[i].t, t), b = bs[i + 1].t;
+    if (b < t) continue;
+    c.strokeStyle = COL[top.sec]; c.lineWidth = lw;
+    c.beginPath();
+    for (let tt = a; tt <= b; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); tt === a ? c.moveTo(x, y) : c.lineTo(x, y); }
+    c.stroke();
+    const mid = (bs[i].t + b) / 2, mx = X(mid);
+    if (mx > hitX - 30 && mx < w + 60) {
+      c.textAlign = 'center'; c.fillStyle = COL[top.sec];
+      c.font = `800 ${clamp(w / 60, 12, 16)}px ${FB}`;
+      c.fillText(`↑ ${SECTIONS.find(s => s.id === top.sec).name.toUpperCase()}`, mx, Y(APEX_CUE) - 12);
+    }
+  }
+  // beat dots at the bottom of every bounce, plus words where the music changes
+  let shownReady = false, prevDyn = null;
+  for (const b of bs) {
+    const x = X(b.t);
+    if (x < hitX - 40 || x > w + 20) continue;
+    const future = b.t >= t - .05;
+    c.fillStyle = future ? COL.ivory : alpha(COL.ivory, .35);
+    c.beginPath(); c.arc(x, Y(BOT), lw * 1.15, 0, Math.PI * 2); c.fill();
+    let word = '';
+    if (b.ready && !shownReady && future) { word = 'Ready'; shownReady = true; }
+    if (!b.ready && b.j === 0 && G.state === 'prepped') word = 'Go!';
+    if (!b.ready && b.j === G.piece.length && G.state !== 'fermata') word = 'Last';
+    if (word) { c.font = `italic 700 15px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'center'; c.fillText(word, x, Y(BOT) + 24); }
+  }
+  if (G.state === 'prepped' || G.state === 'playing') {
+    let prev = G.piece.marks[0].dyn;
+    for (const m of G.piece.marks.slice(1)) {
+      const words = [];
+      if (m.dyn) { words.push(DYN[m.dyn] > DYN[prev] ? 'Louder!' : 'Softer…'); prev = m.dyn; }
+      if (m.text === 'rit.') words.push('Slow down…');
+      const b = bs.find(x => x.j === m.b);
+      if (!b || b.t < t) continue;
+      const x = X(b.t);
+      if (x > w + 40) continue;
+      c.font = `italic 700 ${clamp(w / 50, 14, 19)}px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'left';
+      c.fillText(words.join('  '), x + 8, Y(topFor(m.b).y) - 10);
+    }
+  }
+  if (M.hold) {
+    const hx = X(M.hold.from + .45), cx = X(M.hold.to);
+    c.font = `italic 700 15px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'left';
+    if (cx - hx > 50 && cx > hitX) c.fillText('Hold…', Math.max(hx, hitX + 12), Y(HOLD_Y) - 12);
+    if (cx > hitX - 20) { c.textAlign = 'center'; c.fillStyle = COL.brass; c.fillText('Cut!', cx, Y(BOT) + 24); }
   }
 
-  SECTIONS.forEach((s, i) => drawSection(c, i, s, t, w, h, bandH));
-  drawConductor(c, t, w, h);
-  drawGhost(c, t, w, h);
+  // the hit line, the spot you should be on, your trail and your ball
+  c.strokeStyle = alpha(COL.ivory, .5); c.lineWidth = 2;
+  c.beginPath(); c.moveTo(hitX, 0); c.lineTo(hitX, Y(STRIP_Y)); c.stroke();
+  const target = yAt(t, M), d = Math.abs(cursor.y - target);
+  const tr = cursor.trail;
+  c.lineWidth = 3;
+  for (let i = 1; i < tr.length; i++) {
+    const xa = hitX - (t - tr[i - 1].t) * pps, xb = hitX - (t - tr[i].t) * pps;
+    if (xb < 0) continue;
+    c.strokeStyle = alpha(COL.ivory, .15 + .5 * i / tr.length);
+    c.beginPath(); c.moveTo(xa, Y(tr[i - 1].y)); c.lineTo(xb, Y(tr[i].y)); c.stroke();
+  }
+  c.strokeStyle = alpha(COL.ivory, .7); c.lineWidth = 2;
+  c.beginPath(); c.arc(hitX, Y(target), lw * 1.8, 0, Math.PI * 2); c.stroke();
+  const live = G.state !== 'menu';
+  const ballCol = !live ? COL.ivory : d < .05 ? COL.brass : d < .12 ? COL.ivory : COL.bad;
+  const by = Y(cursor.y), br = clamp(h * .022, 9, 15);
+  const gl = c.createRadialGradient(hitX, by, 0, hitX, by, br * 2.6);
+  gl.addColorStop(0, alpha(ballCol, .55)); gl.addColorStop(1, alpha(ballCol, 0));
+  c.fillStyle = gl; c.beginPath(); c.arc(hitX, by, br * 2.6, 0, Math.PI * 2); c.fill();
+  c.fillStyle = ballCol; c.beginPath(); c.arc(hitX, by, br, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = COL.coat; c.lineWidth = 2; c.stroke();
 
-  // ripples
   G.ripples = G.ripples.filter(r => t - r.t0 < .7);
   for (const r of G.ripples) {
     const k = (t - r.t0) / .7;
-    c.strokeStyle = alpha(r.col || COL.brass, (1 - k) * .8); c.lineWidth = 2;
-    c.beginPath(); c.arc(r.x * w, r.y * h, 6 + k * (20 + 40 * r.a), 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = alpha(r.col || COL.brass, (1 - k) * .8); c.lineWidth = 3;
+    c.beginPath(); c.arc(hitX, Y(r.y), br + k * (24 + 40 * r.a), 0, Math.PI * 2); c.stroke();
   }
-  // baton trail and tip
-  const tr = cursor.trail;
-  for (let i = 1; i < tr.length; i++) {
-    c.strokeStyle = alpha(COL.brass, i / tr.length * .55); c.lineWidth = 1 + i / tr.length * 3;
-    c.beginPath(); c.moveTo(tr[i - 1].x * w, tr[i - 1].y * h); c.lineTo(tr[i].x * w, tr[i].y * h); c.stroke();
-  }
-  const glow = c.createRadialGradient(cursor.x * w, cursor.y * h, 0, cursor.x * w, cursor.y * h, 16);
-  glow.addColorStop(0, alpha(COL.ivory, .95)); glow.addColorStop(1, alpha(COL.brass, 0));
-  c.fillStyle = glow; c.beginPath(); c.arc(cursor.x * w, cursor.y * h, 16, 0, Math.PI * 2); c.fill();
 
   // judgement popup
   G.popups = G.popups.filter(p => t - p.t0 < 1.1);
   for (const pp of G.popups) {
-    const k = (t - pp.t0) / 1.1, y = h * .4 - k * 18;
+    const k = (t - pp.t0) / 1.1, py = h * .17 - k * 14, px = hitX + (w - hitX) * .42;
     c.globalAlpha = 1 - k * k; c.textAlign = 'center';
-    c.font = `italic 800 ${clamp(w / 14, 28, 56)}px ${FD}`;
+    c.font = `italic 800 ${clamp(w / 13, 30, 64)}px ${FD}`;
     c.fillStyle = pp.q >= 1 ? COL.brass : pp.q >= .6 ? COL.winds : COL.bad;
-    c.fillText(pp.word, w / 2, y);
-    if (pp.sub) { c.font = `700 ${clamp(w / 45, 12, 16)}px ${FB}`; c.fillStyle = COL.ivory; c.fillText(pp.sub.toUpperCase(), w / 2, y + clamp(w / 30, 18, 28)); }
+    c.fillText(pp.word, px, py);
+    if (pp.sub) { c.font = `800 ${clamp(w / 45, 12, 16)}px ${FB}`; c.fillStyle = COL.ivory; c.fillText(pp.sub.toUpperCase(), px, py + clamp(w / 30, 18, 28)); }
     c.globalAlpha = 1;
   }
 }
 
-/* ---------- Ghost baton: shows when, how big and where ---------- */
-const ghost = {x:.5, y:.74, ok:false};
-function cueNow() {
-  if (G.state !== 'playing') return null;
-  for (const [sec, cu] of Object.entries(G.cue)) if (!G.active[sec] && cu.status === 'pending' && G.pos >= cu.b - 3) return sec;
-  return null;
-}
-function ghostTarget(t) {
-  const st = G.state;
-  if (st !== 'ready' && st !== 'prepped' && st !== 'playing') return null;
-  const sec = cueNow();
-  if (sec) { const z = SECTIONS.findIndex(s => s.id === sec); return {x:(z + .5) / 4, y:CUE_Y * .45, amp:0, phase:.5, sec}; }
-  let prev, next, j;
-  if (st === 'ready') {
-    const iv = idealAt(0), ph = (((t - G.readyT0) / iv) % 1 + 1) % 1;
-    prev = t - ph * iv; next = prev + iv; j = 0;
-  } else {
-    const clk = laneClock(t); j = clk.k + 1; prev = clk.base; next = clk.time(j);
-  }
-  const phase = clamp((t - prev) / Math.max(.05, next - prev), 0, 1);
-  const amp = .03 + DYN[markAt(Math.min(j, G.piece.length)).dyn] * .3;
-  return {x:.5, y:.74 - amp * Math.sin(Math.PI * phase), amp, phase};
-}
-function drawGhost(c, t, w, h) {
-  const g = ghostTarget(t);
-  if (!g) { ghost.ok = false; return; }
-  if (!ghost.ok) { ghost.x = g.x; ghost.y = g.y; ghost.ok = true; }
-  const k = g.sec || Math.abs(ghost.x - g.x) > .02 ? .12 : .6;
-  ghost.x = lerp(ghost.x, g.x, k); ghost.y = lerp(ghost.y, g.y, k);
-  const gx = ghost.x * w, gy = ghost.y * h;
-  if (!g.sec) {
-    c.strokeStyle = alpha(COL.ivory, .18); c.setLineDash([3, 5]); c.lineWidth = 2;
-    c.beginPath(); c.moveTo(gx, (.74 - g.amp) * h); c.lineTo(gx, .74 * h); c.stroke(); c.setLineDash([]);
-    const hitGlow = Math.max(0, 1 - Math.min(g.phase, 1 - g.phase) * 8);
-    c.strokeStyle = alpha(COL.brass, .3 + .6 * hitGlow); c.lineWidth = 2;
-    c.beginPath(); c.ellipse(gx, .74 * h + 6, 16 + 8 * hitGlow, 5 + 2 * hitGlow, 0, 0, Math.PI * 2); c.stroke();
-  } else {
-    c.font = `italic 700 ${clamp(w / 40, 13, 18)}px ${FD}`; c.fillStyle = COL[g.sec]; c.textAlign = 'center';
-    c.fillText('lift here!', gx, gy + 30);
-  }
-  c.fillStyle = alpha(COL.ivory, .28); c.strokeStyle = alpha(COL.ivory, .75); c.lineWidth = 2;
-  c.beginPath(); c.arc(gx, gy, 13, 0, Math.PI * 2); c.fill(); c.stroke();
-  if (G.state === 'ready' || (G.state === 'playing' && G.k < 6)) {
-    c.font = `600 11px ${FB}`; c.fillStyle = alpha(COL.ivory, .7); c.textAlign = 'left';
-    c.fillText('copy me', gx + 20, gy + 4);
-  }
-}
-
-function drawSection(c, i, s, t, w, h, bandH) {
-  const zoneW = w / 4, cx = (i + .5) * zoneW;
-  const cy = bandH + (h - bandH) * (.22 + .07 * Math.abs(i - 1.5));
-  const r = clamp(Math.min(zoneW / 17.5, h / 42), 3, 11);
+// The orchestra sits in a strip along the bottom of the stage
+function drawSection(c, i, s, t, w, h) {
+  const zoneW = w / 4, stripH = h * (1 - STRIP_Y);
+  const cx = (i + .5) * zoneW, cy = h * STRIP_Y + stripH * .42;
+  const r = clamp(Math.min(zoneW / 17.5, stripH / 7), 3, 9);
   const col = COL[s.id];
   const inGame = G.state !== 'menu';
   const awake = !inGame || G.active[s.id];
   const cue = G.cue[s.id];
-  const open = inGame && cue && !G.active[s.id] && (G.state === 'playing' || G.state === 'fermata') && G.pos >= cue.b - 4;
+  const soon = inGame && cue && !G.active[s.id] && cue.status === 'pending' && G.state === 'playing' && G.pos >= cue.b - 4;
   const hitAge = t - (G.hit[s.id] ?? -9);
   const bounce = awake && hitAge >= 0 ? Math.exp(-hitAge * 9) : 0;
   const busy = awake && hitAge > -1 && hitAge < .9;
 
-  if (open) {
+  if (soon) {
     const p = .5 + .5 * Math.sin(t * 7);
-    const gl = c.createRadialGradient(cx, cy, 0, cx, cy, zoneW * .62);
-    gl.addColorStop(0, alpha(col, .18 + .22 * p)); gl.addColorStop(1, alpha(col, 0));
-    c.fillStyle = gl; c.fillRect(cx - zoneW / 2, cy - zoneW * .62, zoneW, zoneW * 1.24);
-    c.fillStyle = alpha(col, .25 + .25 * p); c.fillRect(i * zoneW, 0, zoneW, bandH);
-    c.fillStyle = col; c.textAlign = 'center'; c.font = `italic 700 ${clamp(zoneW / 7, 13, 22)}px ${FD}`;
-    c.fillText('Cue me ↑', cx, bandH * .62);
+    const gl = c.createRadialGradient(cx, cy, 0, cx, cy, zoneW * .5);
+    gl.addColorStop(0, alpha(col, .2 + .25 * p)); gl.addColorStop(1, alpha(col, 0));
+    c.fillStyle = gl; c.fillRect(cx - zoneW / 2, h * STRIP_Y, zoneW, stripH);
   }
-
   const seats = s.id === 'strings' ? [5, 5] : s.id === 'timp' ? [1] : [3, 3];
-  const dx = r * 2.7, dy = r * 3;
+  const dx = r * 2.7, dy = r * 2.6;
   c.globalAlpha = awake ? 1 : .42;
   seats.forEach((count, row) => {
     for (let j = 0; j < count; j++) {
       const off = (j - (count - 1) / 2) * dx + (row ? dx * .5 : 0);
-      let px = cx + off, py = cy + (row - (seats.length - 1) / 2) * dy - Math.abs(off) * .08;
+      let px = cx + off, py = cy + (row - (seats.length - 1) / 2) * dy;
       if (G.chaos > .35 && awake && inGame) { px += (Math.random() - .5) * G.chaos * 3; py += (Math.random() - .5) * G.chaos * 3; }
       const sway = awake ? Math.sin(t * 2 + j + row) * .6 : 0;
       const by = py - bounce * r * .45;
       if (s.id === 'timp') {
         c.fillStyle = alpha(COL.timp, .9);
-        c.beginPath(); c.ellipse(px - r * 2.2, py + r * 1.6, r * 1.6, r * .7, 0, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.ellipse(px + r * 2.2, py + r * 1.6, r * 1.4, r * .65, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(px - r * 2.2, py + r * 1.4, r * 1.6, r * .7, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(px + r * 2.2, py + r * 1.4, r * 1.4, r * .65, 0, 0, Math.PI * 2); c.fill();
         c.strokeStyle = COL.ivory; c.lineWidth = 1.5;
         const lift = bounce * r;
-        c.beginPath(); c.moveTo(px - r * .6, by + r * .4); c.lineTo(px - r * 1.8, py + r * 1.1 - lift); c.stroke();
-        c.beginPath(); c.moveTo(px + r * .6, by + r * .4); c.lineTo(px + r * 1.8, py + r * 1.1 - lift * .5); c.stroke();
+        c.beginPath(); c.moveTo(px - r * .6, by + r * .4); c.lineTo(px - r * 1.8, py + r * 1 - lift); c.stroke();
+        c.beginPath(); c.moveTo(px + r * .6, by + r * .4); c.lineTo(px + r * 1.8, py + r * 1 - lift * .5); c.stroke();
       }
       c.fillStyle = col;
       c.beginPath(); c.ellipse(px, py + r * 1.15, r * 1.25, r * .8, 0, Math.PI, 0); c.fill();
@@ -1008,164 +1088,21 @@ function drawSection(c, i, s, t, w, h, bandH) {
     }
   });
   c.globalAlpha = 1;
-
   if (inGame && !awake && (G.state === 'playing' || G.state === 'prepped' || G.state === 'ready')) {
     c.fillStyle = alpha(COL.mist, .8); c.textAlign = 'left';
     for (let z = 0; z < 3; z++) {
       const ph = (t * .6 + z / 3) % 1;
-      c.font = `italic 600 ${10 + ph * 8}px ${FD}`;
+      c.font = `italic 600 ${9 + ph * 7}px ${FD}`;
       c.globalAlpha = 1 - ph;
-      c.fillText('z', cx + r * 3 + ph * r * 3, cy - r * 2 - ph * r * 6);
+      c.fillText('z', cx + r * 3 + ph * r * 3, cy - r - ph * r * 4);
     }
     c.globalAlpha = 1;
   }
-
-  const labelY = cy + (seats.length / 2) * dy + r * 2.2 + (s.id === 'timp' ? r * 1.2 : 0);
   c.textAlign = 'center'; c.fillStyle = col;
-  c.font = `700 ${clamp(zoneW / 12, 9.5, 12)}px ${FB}`;
-  c.fillText(s.name.toUpperCase(), cx, labelY);
-  if (inGame && cue && cue.status !== 'pending') {
-    const lab = {hit:'on cue', late:'late', missed:'missed', 'missed-late':'very late'}[cue.status];
-    c.font = `italic 600 ${clamp(zoneW / 11, 10, 13)}px ${FD}`; c.fillStyle = COL.mist;
-    c.fillText(lab, cx, labelY + 15);
-  }
-}
-
-function drawConductor(c, t, w, h) {
-  const bx = w / 2, base = h - 4;
-  const hr = clamp(h * .032, 7, 18);
-  const pw = clamp(w * .16, 70, 160), ph = hr * 1.6;
-  c.fillStyle = COL.coat; c.fillRect(bx - pw / 2, base - ph, pw, ph);
-  c.fillStyle = COL.gold; c.fillRect(bx - pw / 2, base - ph, pw, 2);
-  const shY = base - ph - hr * 1.5;
-  c.fillStyle = COL.coat;
-  c.beginPath(); c.moveTo(bx - hr * 1.7, base - ph); c.lineTo(bx - hr * 1.4, shY); c.quadraticCurveTo(bx, shY - hr * .7, bx + hr * 1.4, shY); c.lineTo(bx + hr * 1.7, base - ph); c.closePath(); c.fill();
-  c.fillStyle = COL.mist; c.beginPath(); c.arc(bx, shY - hr * .9, hr, 0, Math.PI * 2); c.fill();
-  c.fillStyle = COL.dim; c.beginPath(); c.arc(bx, shY - hr * 1.15, hr * .95, Math.PI, 0); c.fill();
-  // baton arm reaches toward the tip
-  const sx = bx + hr * 1.2, sy = shY + hr * .2;
-  const tx = cursor.x * w, ty = cursor.y * h;
-  const ang = Math.atan2(ty - sy, tx - sx), reach = Math.min(Math.hypot(tx - sx, ty - sy) * .5, hr * 4.5);
-  const hx = sx + Math.cos(ang) * reach, hy = sy + Math.sin(ang) * reach;
-  c.strokeStyle = COL.coat; c.lineCap = 'round'; c.lineWidth = hr * .7;
-  c.beginPath(); c.moveTo(sx, sy); c.lineTo(hx, hy); c.stroke();
-  c.beginPath(); c.moveTo(bx - hr * 1.2, sy); c.lineTo(bx - hr * 2.2, sy + hr * 1.6); c.stroke();
-  c.fillStyle = COL.face; c.beginPath(); c.arc(hx, hy, hr * .32, 0, Math.PI * 2); c.fill();
-  c.strokeStyle = COL.ivory; c.lineWidth = 2;
-  c.beginPath(); c.moveTo(hx, hy); c.lineTo(tx, ty); c.stroke();
-  c.lineCap = 'butt';
-}
-
-/* ---------- Beat lane: orbs slide into the ring, like a rhythm game ---------- */
-function roundRect(c, x, y, w, h, r) {
-  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
-  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
-}
-function drawLane(t) {
-  const {c, w, h} = fit(scoreC);
-  c.clearRect(0, 0, w, h);
-  const p = G.piece, st = G.state;
-  const hitX = clamp(w * .13, 52, 110), ahead = 3.2, pps = (w - hitX) / ahead;
-  const X = tt => hitX + (tt - t) * pps;
-  const mainY = h * .66, upY = h * .2, railH = 23;
-
-  c.fillStyle = alpha(COL.ivory, .05); c.fillRect(0, mainY - railH, w, railH * 2);
-  c.strokeStyle = alpha(COL.gold, .35); c.lineWidth = 1;
-  for (const y of [mainY - railH, mainY + railH]) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
-
-  const gemFor = (j, tt) => {
-    const d = DYN[markAt(j).dyn];
-    return {t:tt, r:6 + d * 13, col:d >= .78 ? COL.timp : d >= .45 ? COL.gold : COL.mist, label:String(j % p.meter + 1), word:'', down:j % p.meter === 0};
-  };
-  const gems = [], bars = [], banners = [];
-  let hold = null;
-  if (st === 'menu' || st === 'ready') {
-    const iv = idealAt(0);
-    const start = st === 'menu' ? t + .4 : G.readyT0 + Math.max(0, Math.ceil((t - G.readyT0 - .3 * iv) / iv)) * iv;
-    for (let i = 0; i < 6; i++) gems.push({t:start + i * iv, r:11, col:COL.mist, label:'', word:i === 0 ? 'Ready' : '', down:false});
-  } else if (st === 'prepped' || st === 'playing') {
-    const clk = laneClock(t);
-    for (let j = clk.k + 1; j <= p.length; j++) {
-      const tt = clk.time(j);
-      if (tt > t + ahead + .3) break;
-      const g = gemFor(j, tt);
-      if (j === 0) { g.word = 'Go!'; g.r = Math.max(g.r, 14); }
-      if (j === p.length) { g.word = 'Last'; hold = {from:tt, to:tt + 2.5}; }
-      gems.push(g);
-    }
-    for (const [sec, cu] of Object.entries(G.cue)) {
-      if (G.active[sec] || cu.status !== 'pending') continue;
-      bars.push({from:clk.time(cu.b - 4), to:clk.time(cu.b + 1), sec});
-    }
-    let prevDyn = p.marks[0].dyn;
-    for (const m of p.marks.slice(1)) {
-      const words = [];
-      if (m.dyn) { words.push(DYN[m.dyn] > DYN[prevDyn] ? 'Louder!' : 'Softer…'); prevDyn = m.dyn; }
-      if (m.text === 'rit.') words.push('Slow down…');
-      if (m.b > clk.k && words.length) banners.push({t:clk.time(m.b), text:words.join('  ')});
-    }
-  } else if (st === 'fermata') {
-    hold = {from:G.fermataT, to:G.fermataT + 2.5};
-  }
-  if (hold) {
-    const cutT = st === 'fermata' && t > hold.to + .3 ? t - .3 : hold.to;
-    const x0 = Math.max(hitX, X(hold.from)), x1 = X(cutT);
-    if (x1 > x0) {
-      c.fillStyle = alpha(COL.ivory, .14); roundRect(c, x0, mainY - 9, x1 - x0, 18, 9); c.fill();
-      c.fillStyle = alpha(COL.ivory, .8); c.font = `italic 700 13px ${FD}`; c.textAlign = 'left';
-      if (x1 - x0 > 60) c.fillText('Hold…', x0 + 14, mainY + 4.5);
-    }
-    gems.push({t:cutT, r:14, col:COL.velvet, label:'', word:'Cut!', down:true});
-  }
-
-  // cue bars ride the upper track
-  for (const b of bars) {
-    const x0 = X(b.from), x1 = X(b.to);
-    if (x1 < 0 || x0 > w) continue;
-    const live = x0 <= hitX && x1 >= hitX, col = COL[b.sec];
-    c.fillStyle = alpha(col, live ? .95 : .55); roundRect(c, x0, upY - 11, x1 - x0, 22, 11); c.fill();
-    c.fillStyle = COL.ink; c.font = `800 11.5px ${FB}`; c.textAlign = 'left';
-    c.fillText(`↑ LIFT TO ${SECTIONS.find(s => s.id === b.sec).name.toUpperCase()}`, Math.max(x0, hitX - 40) + 10, upY + 4);
-  }
-  for (const bn of banners) {
-    const x = X(bn.t); if (x < hitX - 20 || x > w + 10) continue;
-    c.font = `italic 700 15px ${FD}`; c.textAlign = 'left';
-    const tw = c.measureText(bn.text).width + 18;
-    c.fillStyle = alpha(COL.ivory, .1); roundRect(c, x - 6, upY - 11, tw, 22, 11); c.fill();
-    c.fillStyle = COL.ivory; c.fillText(bn.text, x + 3, upY + 5);
-  }
-
-  // the ring
-  const next = gems.find(g => g.t >= t - .3);
-  const near = next ? clamp(1 - Math.abs(next.t - t) / .22, 0, 1) : 0;
-  c.fillStyle = alpha(COL.gold, .08 + near * .25);
-  c.beginPath(); c.arc(hitX, mainY, 24, 0, Math.PI * 2); c.fill();
-  c.strokeStyle = COL.ivory; c.lineWidth = 2 + near * 2;
-  c.beginPath(); c.arc(hitX, mainY, 24, 0, Math.PI * 2); c.stroke();
-  c.font = `700 9.5px ${FB}`; c.fillStyle = COL.dim; c.textAlign = 'center';
-  c.fillText('BEAT', hitX, mainY + railH + 11);
-
-  // your past beats drift away to the left
-  G.hitMarks = G.hitMarks.filter(m => t - m.t < 2);
-  for (const m of G.hitMarks) {
-    c.fillStyle = m.q >= 1 ? COL.brass : m.q >= .6 ? COL.winds : COL.bad;
-    c.beginPath(); c.arc(X(m.t), mainY, 5, 0, Math.PI * 2); c.fill();
-  }
-
-  for (let i = gems.length - 1; i >= 0; i--) {
-    const g = gems[i], x = X(g.t);
-    if (x < -30 || x > w + 30) continue;
-    const fade = x < hitX ? clamp(1 - (hitX - x) / 40, 0, 1) : 1;
-    c.globalAlpha = fade;
-    const gl = c.createRadialGradient(x, mainY, 0, x, mainY, g.r * 1.9);
-    gl.addColorStop(0, alpha(g.col, .5)); gl.addColorStop(1, alpha(g.col, 0));
-    c.fillStyle = gl; c.beginPath(); c.arc(x, mainY, g.r * 1.9, 0, Math.PI * 2); c.fill();
-    c.fillStyle = g.col; c.beginPath(); c.arc(x, mainY, g.r, 0, Math.PI * 2); c.fill();
-    if (g.down) { c.strokeStyle = COL.ivory; c.lineWidth = 2; c.stroke(); }
-    if (g.label && g.r > 9) { c.fillStyle = COL.ink; c.font = `italic 800 ${Math.round(clamp(g.r, 10, 16))}px ${FD}`; c.textAlign = 'center'; c.fillText(g.label, x, mainY + g.r * .38); }
-    if (g.word) { c.fillStyle = COL.ivory; c.font = `italic 700 13px ${FD}`; c.textAlign = 'center'; c.fillText(g.word, x, mainY - g.r - 6); }
-    c.globalAlpha = 1;
-  }
+  c.font = `700 ${clamp(zoneW / 13, 9, 11.5)}px ${FB}`;
+  let label = s.name.toUpperCase();
+  if (inGame && cue && cue.status !== 'pending') label += ' · ' + {hit:'on cue', late:'late', missed:'missed', 'missed-late':'very late'}[cue.status];
+  c.fillText(label, cx, Math.min(h - 5, h * STRIP_Y + stripH * .95));
 }
 
 /* ---------- HUD ---------- */
@@ -1180,7 +1117,7 @@ function tip(s, cls) {
 function updateHud(force) {
   const t = nowS(); if (!force && t - hudT < .1) return; hudT = t;
   const p = G.piece, live = G.state === 'playing' || G.state === 'fermata';
-  const nextBeat = G.state === 'playing' ? Math.min(G.k + 1, p.length) : 0;
+  const nextBeat = G.state === 'playing' ? Math.min(G.k + 1, p.length) : G.state === 'fermata' || G.state === 'done' ? p.length : 0;
   const mk = markAt(nextBeat), [lo, hi] = mk.tempo;
   const bar = Math.min(p.length / p.meter, Math.floor(G.pos / p.meter) + 1);
   $('#barLine').textContent = G.state === 'fermata' || G.state === 'done' ? 'Final chord' : `Bar ${G.state === 'playing' ? bar : 1} / ${p.length / p.meter}`;
@@ -1203,7 +1140,7 @@ function updateHud(force) {
   m.style.width = Math.round(ens * 100) + '%';
   m.style.background = ens > .7 ? 'var(--good)' : ens > .45 ? 'var(--warn)' : 'var(--bad)';
   $('#ensText').textContent = ens > .7 ? 'together' : ens > .45 ? 'wobbly' : 'falling apart';
-  $('#scoreNow').textContent = G.points.toLocaleString();
+  $('#scoreNow').textContent = Math.round(G.points).toLocaleString();
 }
 
 /* ---------- Main loop ---------- */
@@ -1214,7 +1151,13 @@ function frame() {
   advance(t, dt);
   updateCues(dt, t);
   if (G.state === 'fermata' && t - G.fermataT > 8) cutoff(t);
-  drawStage(t); drawLane(t); updateHud(false);
+  const M = pathModel(t);
+  if (G.state === 'prepped' || G.state === 'playing') {
+    const acc = clamp(1 - Math.abs(cursor.y - yAt(t, M)) / .14, 0, 1);
+    G.trk += acc * dt; G.trkT += dt;
+    G.points += acc * dt * 30 * (1 + Math.min(3, Math.floor(G.combo / 8)));
+  }
+  drawStage(t, M); updateHud(false);
   requestAnimationFrame(frame);
 }
 
@@ -1266,7 +1209,7 @@ PIECES.forEach(p => {
 const MODE_NOTES = {
   motion:'Prop your phone or laptop so the camera sees you from the waist up, stand back about 1–2 m, in good light. The fastest-moving thing in view becomes your baton, so keep the background still.',
   color:'Steadier than motion tracking. You will lock onto a brightly colored object, then conduct with it.',
-  mouse:'Move the mouse, or drag a finger on the stage, up and down to beat.',
+  mouse:'Move the mouse up and down over the stage, or drag a finger on it, to follow the line.',
 };
 function setMode(m) {
   G.mode = m;
