@@ -139,14 +139,14 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
         <details class="how" open>
           <summary>How to conduct</summary>
           <ol>
-            <li>Your baton is the ball on the left. Keep it on the gold line as it scrolls in, like Trombone Champ.</li>
-            <li>The line bounces once per beat, and the bottom of each bounce is the beat. After two Ready bounces the orchestra starts on Go!</li>
-            <li>The orchestra plays on its own, but its mood follows you. Conduct well and it plays together, in tune and full. Slack off and it gets sloppy.</li>
-            <li>Tall bounces are loud, small ones soft. Beat a little ahead or behind to push the tempo.</li>
-            <li>When the line shoots up into the cue zone with a section's name, reach up with it to bring them in. At the end the line goes flat: hold, then dip once on Cut!</li>
+            <li>Up and down: keep your ball on the gold line as it scrolls in, like Trombone Champ. The bottom of each bounce is the beat. Tall bounces are loud, small ones soft.</li>
+            <li>Left and right: aim the spotlight at a section. Whoever you aim at plays out and stands up.</li>
+            <li>When a section's badge rides in on the line, aim at them to bring them in. Colored stretches of the line are solos: keep aiming at that section until it ends.</li>
+            <li>Sections you ignore get bored, then fall asleep and miss notes. Sweep across the orchestra now and then.</li>
+            <li>The orchestra plays on its own, but its mood follows you. At the end the line goes flat: hold, then dip once on Cut!</li>
           </ol>
         </details>
-        <p class="fine">Public-domain scores, played by an orchestra synthesized live in your browser. No recordings, nothing to license. Keyboard works too: <kbd>Space</kbd> beats, <kbd>↑</kbd> <kbd>↓</kbd> louder and softer, <kbd>1</kbd>–<kbd>4</kbd> cue a section.</p>
+        <p class="fine">Public-domain scores, played by an orchestra synthesized live in your browser. No recordings, nothing to license. Keyboard works too: <kbd>Space</kbd> beats, <kbd>↑</kbd> <kbd>↓</kbd> louder and softer, <kbd>1</kbd>–<kbd>4</kbd> aim at a section.</p>
       </div>
     </div>
 
@@ -264,6 +264,7 @@ function buildOde() {
     events: ev.sort((a, b) => a.b - b.b), melody,
     marks:[{b:0, dyn:'p', tempo:[108,132], text:'Allegro assai'}, {b:32, dyn:'mf'}, {b:64, dyn:'f'}, {b:96, dyn:'ff'}],
     cues:[{sec:'winds', b:32}, {sec:'brass', b:64}, {sec:'timp', b:96}],
+    solos:[{sec:'winds', from:36, to:48}, {sec:'brass', from:104, to:120}],
     fermata:{strings:['D3','A3','D4','F#4','D5'], winds:['A5','D6'], brass:['D3','A3','D4','F#4'], timp:['D3']},
   };
 }
@@ -300,6 +301,7 @@ function buildCanon() {
     events: ev.sort((a, b) => a.b - b.b), melody,
     marks:[{b:0, dyn:'p', tempo:[50,66], text:'Andante'}, {b:16, dyn:'mp'}, {b:32, dyn:'mf'}, {b:48, dyn:'f'}, {b:72, dyn:'mf', tempo:[38,54], text:'rit.'}],
     cues:[{sec:'winds', b:16}, {sec:'brass', b:48}, {sec:'timp', b:64}],
+    solos:[{sec:'winds', from:40, to:48}, {sec:'strings', from:56, to:64}],
     fermata:{strings:['D3','A3','F#4','A4','D5'], winds:['F#5','D6'], brass:['D3','A3','F#4'], timp:['D3']},
   };
 }
@@ -327,7 +329,7 @@ function initAudio() {
   for (const s of SECTIONS) { const g = AC.createGain(); g.gain.value = BAL[s.id]; g.connect(dynG); buses[s.id] = g; }
   const noise = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
   const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  OUT = {dynG, buses, noise};
+  OUT = {dynG, buses, noise, bal:BAL};
 }
 function envGain(t, att, peak, end, rel) {
   const g = AC.createGain();
@@ -427,9 +429,9 @@ const G = {
   stats:null, fermataVoices:[], fermataT:0, cutoffScore:0,
   ripples:[], keyLevel:.5, lastTip:0,
   combo:0, bestCombo:0, points:0, popups:[],
+  aim:.5, aimSec:1, attn:{}, wakeTip:{}, busGain:{}, soloT:0, soloOn:0, attnSum:0, attnT:0,
 };
 const cursor = {x:.5, y:.62, trail:[]};
-const CUE_Y = .3;
 
 function markAt(p) {
   p = Math.max(0, p);
@@ -546,9 +548,10 @@ function startGame() {
   Object.assign(G, {state:'ready', pos:0, rate:1 / idealAt(0), T:1 / idealAt(0), evIdx:0, chaos:.2, dyn:DYN[markAt(0).dyn], fermataVoices:[], cutoffScore:0, ripples:[], lastTip:0,
     startT:now + 1.2 + 3 * idealAt(0), combo:0, bestCombo:0, points:0, popups:[], mood:.6, tempoMul:1, playerDyn:DYN[markAt(0).dyn], lastBeatT:now, judged:new Set(), missCheck:0});
   G.stats = {timing:0};
-  G.trk = 0; G.trkT = 0; G.trkAll = 0; G.trkAllT = 0; G.cueDwell = 0;
+  G.trk = 0; G.trkT = 0; G.trkAll = 0; G.trkAllT = 0;
   G.active = {}; G.cue = {}; G.hit = {};
-  for (const s of SECTIONS) { G.active[s.id] = true; G.jitter[s.id] = 0; }
+  G.attn = {}; G.wakeTip = {}; G.busGain = {}; G.soloT = 0; G.soloOn = 0; G.attnSum = 0; G.attnT = 0;
+  for (const s of SECTIONS) { G.active[s.id] = true; G.jitter[s.id] = 0; G.attn[s.id] = 1; }
   for (const c of p.cues) { G.active[c.sec] = false; G.cue[c.sec] = {b:c.b, status:'pending'}; }
   beatDet.reset();
   $('#menu').hidden = true; $('#results').hidden = true; $('#calib').hidden = true;
@@ -602,8 +605,9 @@ function cueScore() {
 }
 function finalScores() {
   const n = G.piece.length + 1;
-  const parts = {timing:G.stats.timing / n, track:G.trkAllT ? G.trkAll / G.trkAllT : 0, cues:cueScore(), cutoff:G.cutoffScore};
-  const total = parts.timing * .4 + parts.track * .35 + parts.cues * .17 + parts.cutoff * .08;
+  const solos = G.soloT ? G.soloOn / G.soloT : 0;
+  const parts = {timing:G.stats.timing / n, track:G.trkAllT ? G.trkAll / G.trkAllT : 0, cues:(cueScore() + solos) / 2, attn:G.attnT ? G.attnSum / G.attnT : 0, cutoff:G.cutoffScore};
+  const total = parts.timing * .3 + parts.track * .25 + parts.cues * .2 + parts.attn * .17 + parts.cutoff * .08;
   return {parts, total:Math.round(total * 100)};
 }
 
@@ -620,7 +624,7 @@ function showResults() {
   const [, g, head, line] = tiers.find(x => total >= x[0]);
   $('#resWork').textContent = `${G.piece.title} · ${Math.round(G.points).toLocaleString()} points · best combo ×${G.bestCombo}`;
   $('#resGrade').textContent = g; $('#resHead').textContent = head; $('#resLine').textContent = line;
-  const rows = [['Timing', parts.timing], ['On the line', parts.track], ['Cues', parts.cues], ['Final cutoff', parts.cutoff]];
+  const rows = [['Timing', parts.timing], ['On the line', parts.track], ['Cues & solos', parts.cues], ['Kept awake', parts.attn], ['Final cutoff', parts.cutoff]];
   const box = $('#resRows'); box.textContent = '';
   for (const [label, v] of rows) {
     const r = document.createElement('div'); r.className = 'brow';
@@ -631,7 +635,8 @@ function showResults() {
   const TIPS = {
     timing:'Land the bottom of each bounce right as it reaches the line on the left.',
     track:'Keep the ball glued to the line, all the way up and all the way down each bounce.',
-    cues:'When the line shoots up with a section’s name, reach all the way up with it.',
+    cues:'When a section’s badge rides in on the line, swing left or right to aim at them. Keep aiming through colored solo stretches.',
+    attn:'Sweep across the orchestra now and then. Any section you ignore gets bored, then falls asleep.',
     cutoff:'Hold still while the line is flat, then dip once on Cut!',
   };
   const worst = Object.entries(parts).sort((a, b) => a[1] - b[1])[0][0];
@@ -639,28 +644,67 @@ function showResults() {
   $('#results').hidden = false; $('#stopBtn').hidden = true;
 }
 
-/* ---------- Cues: follow the line up into the cue zone ---------- */
+/* ---------- Aiming: left-right picks the section you're conducting ---------- */
+const soloAt = p => (G.piece.solos || []).find(s => p >= s.from && p < s.to) || null;
+function updateAim(dt, t) {
+  G.aim = lerp(G.aim, cursor.x, Math.min(1, dt * 12));
+  const raw = G.aim * 4, z = clamp(Math.floor(raw), 0, 3);
+  if (raw - G.aimSec < -.08 || raw - G.aimSec > 1.08) G.aimSec = z; // a little hysteresis between sections
+  const live = G.state === 'ready' || G.state === 'playing';
+  const aimed = SECTIONS[G.aimSec].id;
+  for (const s of SECTIONS) {
+    const id = s.id;
+    if (!live || !G.active[id]) continue;
+    let a = G.attn[id];
+    if (id === aimed) {
+      if (a < .5 && t - (G.wakeTip[id] || 0) > 3) { tip(`The ${secName(id)} perk up!`, 'good'); G.wakeTip[id] = t; G.lastTip = t; }
+      a = Math.min(1, a + dt * 1.6);
+    } else a = Math.max(0, a - dt / 30);
+    if (G.attn[id] >= .5 && a < .5 && t - G.lastTip > 2) { tip(`The ${secName(id)} are getting bored. Aim at them!`, 'warn'); G.lastTip = t; }
+    if (G.attn[id] >= .25 && a < .25) { tip(`The ${secName(id)} fell asleep!`, 'bad'); G.lastTip = t; }
+    G.attn[id] = a;
+  }
+  const solo = G.state === 'playing' ? soloAt(G.pos) : null;
+  if (G.state === 'playing') {
+    const act = SECTIONS.filter(s => G.active[s.id]);
+    G.attnSum += act.reduce((x, s) => x + Math.min(1, G.attn[s.id] * 1.6), 0) / act.length * dt; G.attnT += dt;
+    if (solo && G.active[solo.sec]) {
+      G.soloT += dt;
+      if (aimed === solo.sec) { G.soloOn += dt; G.points += dt * 60; }
+    }
+  }
+  if (!AC) return;
+  for (const s of SECTIONS) {
+    const id = s.id, a = G.attn[id];
+    let g = OUT.bal[id] * (a > .5 ? 1 : a > .25 ? .7 : .4);
+    if (live) {
+      if (solo) g *= id === solo.sec ? (aimed === id ? 1.6 : .75) : .55;
+      else g *= aimed === id ? 1.35 : .9;
+    }
+    if (Math.abs(g - (G.busGain[id] || 0)) > .005) { OUT.buses[id].gain.setTargetAtTime(g, AC.currentTime, .08); G.busGain[id] = g; }
+  }
+}
+
+/* ---------- Cues: aim at a section as its badge arrives ---------- */
 function updateCues(dt, t) {
   if (G.state !== 'playing') return;
+  const aimed = SECTIONS[G.aimSec].id;
   for (const [sec, c] of Object.entries(G.cue)) {
     if (c.status === 'pending' && G.pos > c.b + 1.5) {
       c.status = 'missed'; tip(`Missed the ${secName(sec)} cue! They’ll wander in late.`, 'bad'); G.lastTip = t;
     }
-    // nobody cued them, so they come in on their own two bars later
-    if (c.status === 'missed' && !G.active[sec] && G.pos > c.b + 2 * G.piece.meter) { G.active[sec] = true; G.hit[sec] = t; }
+    // nobody cued them, so they come in on their own two bars later, half asleep
+    if (c.status === 'missed' && !G.active[sec] && G.pos > c.b + 2 * G.piece.meter) { G.active[sec] = true; G.hit[sec] = t; G.attn[sec] = .3; }
+    const open = !G.active[sec] && ((c.status === 'pending' && G.pos >= c.b - 2.4) || c.status === 'missed');
+    if (open && aimed === sec) { c.dwell = (c.dwell || 0) + dt; if (c.dwell > .15) tryCue(sec, t); }
+    else c.dwell = 0;
   }
-  if (cursor.y >= CUE_Y) { G.cueDwell = 0; return; }
-  G.cueDwell += dt;
-  if (G.cueDwell < .06) return;
-  const list = Object.entries(G.cue).filter(([sec]) => !G.active[sec]);
-  const pick = list.find(([, c]) => c.status === 'pending' && G.pos >= c.b - 2.4) || list.find(([, c]) => c.status === 'missed');
-  if (pick) tryCue(pick[0], t);
 }
 function tryCue(sec, t) {
   const c = G.cue[sec];
   if (!c || G.active[sec] || G.state !== 'playing') return;
   if (c.status === 'pending' && G.pos < c.b - 2.4) return;
-  G.active[sec] = true; G.hit[sec] = t;
+  G.active[sec] = true; G.hit[sec] = t; G.attn[sec] = 1;
   if (c.status === 'missed') { c.status = 'missed-late'; tip(`The ${secName(sec)} wake up, late.`, 'warn'); }
   else if (G.pos <= c.b + .5) { c.status = 'hit'; G.points += 500; G.mood = clamp(G.mood + .1, 0, 1); popup(`${secName(sec, true)} in!`, 'perfect cue +500', 1); }
   else { c.status = 'late'; G.points += 200; popup(`${secName(sec, true)} in`, 'a bit late +200', .6); }
@@ -699,6 +743,7 @@ function advance(t, dt) {
   while (G.evIdx < ev.length && ev[G.evIdx].b < ahead) {
     const e = ev[G.evIdx++];
     if (!G.active[e.sec] || e.b < G.pos - .6) continue;
+    if (G.attn[e.sec] < .25 && Math.random() < .5) continue; // dozing players miss notes
     const when = Math.max(0, (e.b - G.pos) / G.rate + (G.jitter[e.sec] || 0));
     const det = (Math.random() - .5) * 2 * G.chaos * 38;
     // a grumpy orchestra plays some notes half-heartedly
@@ -814,8 +859,9 @@ function drawCamView() {
     c.strokeStyle = COL.gold; c.lineWidth = 3; c.strokeRect(w * .38, h * .38, w * .24, h * .24);
     return;
   }
-  c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(0, 0, w, h * CUE_Y);
-  c.strokeStyle = COL.gold; c.setLineDash([4, 4]); c.beginPath(); c.moveTo(0, h * CUE_Y); c.lineTo(w, h * CUE_Y); c.stroke(); c.setLineDash([]);
+  c.strokeStyle = COL.gold; c.setLineDash([4, 4]);
+  for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(i * w / 4, 0); c.lineTo(i * w / 4, h); c.stroke(); }
+  c.setLineDash([]);
   if (cam.seen) { c.fillStyle = COL.brass; c.beginPath(); c.arc((1 - cam.track.x) * w, cam.track.y * h, 5, 0, Math.PI * 2); c.fill(); }
 }
 
@@ -826,7 +872,7 @@ const COL = {
   strings:tok('--strings'), winds:tok('--winds'), brass:tok('--brass'), timp:tok('--timp'),
   gold:tok('--gold'), ivory:tok('--ivory'), ink:tok('--ink'), face:tok('--face'), coat:tok('--coat'),
   floor:tok('--floor'), hall:tok('--hall'), velvet:tok('--velvet'), line:tok('--paper-line'), dim:tok('--dim'), mist:tok('--mist'),
-  bad:tok('--bad'), rule:tok('--rule'),
+  bad:tok('--bad'), warn:tok('--warn'), rule:tok('--rule'),
 };
 const FD = '"Bodoni Moda","Bodoni 72",Didot,Georgia,serif';
 const FB = '"Schibsted Grotesk",system-ui,sans-serif';
@@ -844,13 +890,10 @@ function alpha(hex, a) {
 }
 
 /* ---------- The line: the path your baton should trace, scrolling in from the right ---------- */
-const BOT = .74, APEX_CUE = .1, HOLD_Y = .5, STRIP_Y = .82;
+const BOT = .68, HOLD_Y = .46, STRIP_Y = .75;
 const smooth = x => x * x * (3 - 2 * x);
-function topFor(j) {
-  const cu = G.piece.cues.find(c => c.b === j);
-  if (cu && G.state !== 'menu' && !G.active[cu.sec] && G.cue[cu.sec] && G.cue[cu.sec].status === 'pending') return {y:APEX_CUE, sec:cu.sec};
-  return {y:BOT - (.06 + DYN[markAt(clamp(j, 0, G.piece.length)).dyn] * .34), sec:null};
-}
+const cueAt = j => G.state === 'menu' ? null : G.piece.cues.find(c => c.b === j && G.cue[c.sec] && G.cue[c.sec].status === 'pending' && !G.active[c.sec]) || null;
+function topFor(j) { return {y:BOT - (.06 + DYN[markAt(clamp(j, 0, G.piece.length)).dyn] * .36)}; }
 function pathModel(t) {
   const p = G.piece, st = G.state, beats = [];
   let hold = null;
@@ -869,7 +912,6 @@ function pathModel(t) {
   }
   return {beats, hold};
 }
-
 function yAt(tt, M) {
   const {beats, hold} = M;
   if (hold && tt >= hold.from) {
@@ -877,7 +919,7 @@ function yAt(tt, M) {
     if (tt < from + .45) return lerp(BOT, HOLD_Y, smooth((tt - from) / .45));
     if (tt < to - .3) return HOLD_Y;
     if (tt < to) return lerp(HOLD_Y, BOT, smooth((tt - to + .3) / .3));
-    return lerp(BOT, .62, smooth(clamp((tt - to) / .4, 0, 1)));
+    return lerp(BOT, .58, smooth(clamp((tt - to) / .4, 0, 1)));
   }
   if (!beats.length || tt <= beats[0].t) return BOT;
   for (let i = 0; i < beats.length - 1; i++) {
@@ -885,6 +927,24 @@ function yAt(tt, M) {
     if (tt < b.t) return BOT - (BOT - topFor(b.j).y) * Math.sin(Math.PI * (tt - a.t) / Math.max(.05, b.t - a.t));
   }
   return BOT;
+}
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+// a section badge: name plus four dots showing where it sits in the orchestra
+function badge(c, x, y, sec, extra) {
+  const i = SECTIONS.findIndex(s => s.id === sec), col = COL[sec];
+  const text = SECTIONS[i].name.toUpperCase() + (extra ? ' ' + extra : '');
+  c.font = `800 12px ${FB}`;
+  const tw = Math.max(c.measureText(text).width, 40) + 20;
+  c.fillStyle = alpha(COL.coat, .85); roundRect(c, x - tw / 2, y - 30, tw, 34, 8); c.fill();
+  c.strokeStyle = col; c.lineWidth = 2; c.stroke();
+  c.fillStyle = col; c.textAlign = 'center'; c.fillText(text, x, y - 15);
+  for (let k = 0; k < 4; k++) {
+    c.fillStyle = k === i ? col : alpha(COL.ivory, .25);
+    c.beginPath(); c.arc(x - 15 + k * 10, y - 5, k === i ? 3.5 : 2.5, 0, Math.PI * 2); c.fill();
+  }
 }
 
 function drawStage(t, M) {
@@ -897,55 +957,54 @@ function drawStage(t, M) {
   const X = tt => hitX + (tt - t) * pps;
   const Y = y => y * h;
   const lw = clamp(h * .013, 4, 8);
+  const live = G.state !== 'menu';
 
-  // cue zone and the beat floor
-  const bandH = Y(CUE_Y);
-  const bandG = c.createLinearGradient(0, 0, 0, bandH);
-  bandG.addColorStop(0, alpha(COL.gold, .12)); bandG.addColorStop(1, alpha(COL.gold, .02));
-  c.fillStyle = bandG; c.fillRect(0, 0, w, bandH);
-  c.strokeStyle = alpha(COL.gold, .3); c.setLineDash([5, 6]); c.lineWidth = 1;
-  c.beginPath(); c.moveTo(0, bandH); c.lineTo(w, bandH); c.stroke();
-  c.strokeStyle = alpha(COL.ivory, .12);
-  c.beginPath(); c.moveTo(0, Y(BOT)); c.lineTo(w, Y(BOT)); c.stroke();
-  c.setLineDash([]);
-  c.font = `700 10.5px ${FB}`; c.fillStyle = alpha(COL.gold, .65); c.textAlign = 'right';
-  c.fillText('CUE ZONE', w - 12, 18);
+  // spotlight from above onto the section you're aiming at
+  const zoneW = w / 4, ax = G.aim * w, sx = (G.aimSec + .5) * zoneW;
+  const solo = G.state === 'playing' ? soloAt(G.pos) : null;
+  const spotCol = COL[SECTIONS[G.aimSec].id];
+  const beam = c.createLinearGradient(0, 0, 0, h);
+  beam.addColorStop(0, alpha(COL.ivory, 0)); beam.addColorStop(1, alpha(spotCol, .14));
+  c.fillStyle = beam;
+  c.beginPath(); c.moveTo(ax - 20, 0); c.lineTo(ax + 20, 0); c.lineTo(sx + zoneW * .48, h); c.lineTo(sx - zoneW * .48, h); c.closePath(); c.fill();
+  c.strokeStyle = alpha(COL.ivory, .1); c.setLineDash([5, 6]); c.lineWidth = 1;
+  c.beginPath(); c.moveTo(0, Y(BOT)); c.lineTo(w, Y(BOT)); c.stroke(); c.setLineDash([]);
 
   SECTIONS.forEach((s, i) => drawSection(c, i, s, t, w, h));
+  // aim marker on top of the orchestra strip
+  c.fillStyle = spotCol;
+  c.beginPath(); c.moveTo(ax, Y(STRIP_Y) + 2); c.lineTo(ax - 8, Y(STRIP_Y) - 10); c.lineTo(ax + 8, Y(STRIP_Y) - 10); c.closePath(); c.fill();
 
-  // the path: past part faded, future part bright, cue arcs in the section's colour
+  // the path: past part faded, future part bright, solos in the section's colour
   const t0 = t - hitX / pps, t1 = t + ahead + .2, step = 3 / pps;
   c.lineJoin = c.lineCap = 'round';
   c.strokeStyle = alpha(COL.gold, .25); c.lineWidth = lw * .7;
   c.beginPath();
   for (let tt = t0; tt <= t; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); tt === t0 ? c.moveTo(x, y) : c.lineTo(x, y); }
   c.stroke();
-  const glowW = lw * 2.6;
-  for (const [width, col] of [[glowW, alpha(COL.gold, .16)], [lw, COL.gold]]) {
+  for (const [width, col] of [[lw * 2.6, alpha(COL.gold, .16)], [lw, COL.gold]]) {
     c.strokeStyle = col; c.lineWidth = width;
     c.beginPath(); let first = true;
     for (let tt = t; tt <= t1; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); first ? c.moveTo(x, y) : c.lineTo(x, y); first = false; }
     c.stroke();
   }
   const bs = M.beats;
-  for (let i = 0; i < bs.length - 1; i++) {
-    const top = topFor(bs[i + 1].j);
-    if (!top.sec) continue;
-    const a = Math.max(bs[i].t, t), b = bs[i + 1].t;
-    if (b < t) continue;
-    c.strokeStyle = COL[top.sec]; c.lineWidth = lw;
-    c.beginPath();
-    for (let tt = a; tt <= b; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); tt === a ? c.moveTo(x, y) : c.lineTo(x, y); }
-    c.stroke();
-    const mid = (bs[i].t + b) / 2, mx = X(mid);
-    if (mx > hitX - 30 && mx < w + 60) {
-      c.textAlign = 'center'; c.fillStyle = COL[top.sec];
-      c.font = `800 ${clamp(w / 60, 12, 16)}px ${FB}`;
-      c.fillText(`↑ ${SECTIONS.find(s => s.id === top.sec).name.toUpperCase()}`, mx, Y(APEX_CUE) - 12);
+  const timeOfBeat = j => { const b = bs.find(x => x.j === j); if (b) return b.t; const l = bs[bs.length - 1]; return l && j > l.j ? Infinity : -Infinity; };
+  if (G.state === 'ready' || G.state === 'playing') {
+    for (const so of G.piece.solos || []) {
+      if (!G.active[so.sec] && G.cue[so.sec]) {} // still drawn: they will be in by then if you cue them
+      const a = Math.max(timeOfBeat(so.from), t), b = Math.min(timeOfBeat(so.to), t1);
+      if (!(b > a)) continue;
+      c.strokeStyle = COL[so.sec]; c.lineWidth = lw * 1.25;
+      c.beginPath();
+      for (let tt = a; tt <= b; tt += step) { const x = X(tt), y = Y(yAt(tt, M)); tt === a ? c.moveTo(x, y) : c.lineTo(x, y); }
+      c.stroke();
+      const lx = Math.max(X(a), hitX + 70);
+      if (lx < X(b) - 20 && lx < w - 60) badge(c, Math.min(lx + 40, w - 70), Y(topFor(so.from).y) - 18, so.sec, 'SOLO');
     }
   }
-  // beat dots at the bottom of every bounce, plus words where the music changes
-    for (const b of bs) {
+  // beat dots at the bottom of every bounce, cue badges, and words where the music changes
+  for (const b of bs) {
     const x = X(b.t);
     if (x < hitX - 40 || x > w + 20) continue;
     const future = b.t >= t - .05;
@@ -956,6 +1015,13 @@ function drawStage(t, M) {
     if (G.state === 'ready' && b.j === 0) word = 'Go!';
     if (G.state === 'playing' && b.j === G.piece.length) word = 'Last';
     if (word) { c.font = `italic 700 15px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'center'; c.fillText(word, x, Y(BOT) + 24); }
+    const cu = cueAt(b.j);
+    if (cu && future) {
+      c.strokeStyle = COL[cu.sec]; c.lineWidth = 3;
+      c.beginPath(); c.arc(x, Y(BOT), lw * 2.2, 0, Math.PI * 2); c.stroke();
+      const ti = SECTIONS.findIndex(q => q.id === cu.sec);
+      badge(c, x, Y(BOT) - 14 - (BOT - topFor(b.j).y) * h * .2, cu.sec, ti < G.aimSec ? '· ← AIM' : ti > G.aimSec ? '· AIM →' : '· HOLD AIM');
+    }
   }
   if (G.state === 'ready' || G.state === 'playing') {
     let prev = G.piece.marks[0].dyn;
@@ -963,12 +1029,10 @@ function drawStage(t, M) {
       const words = [];
       if (m.dyn) { words.push(DYN[m.dyn] > DYN[prev] ? 'Louder!' : 'Softer…'); prev = m.dyn; }
       if (m.text === 'rit.') words.push('Slow down…');
-      const b = bs.find(x => x.j === m.b);
-      if (!b || b.t < t) continue;
-      const x = X(b.t);
-      if (x > w + 40) continue;
+      const tb = timeOfBeat(m.b);
+      if (!isFinite(tb) || tb < t) continue;
       c.font = `italic 700 ${clamp(w / 50, 14, 19)}px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'left';
-      c.fillText(words.join('  '), x + 8, Y(topFor(m.b).y) - 10);
+      c.fillText(words.join('  '), X(tb) + 8, Y(topFor(m.b).y) - 10);
     }
   }
   if (M.hold) {
@@ -980,7 +1044,7 @@ function drawStage(t, M) {
 
   // the hit line, the spot you should be on, your trail and your ball
   c.strokeStyle = alpha(COL.ivory, .5); c.lineWidth = 2;
-  c.beginPath(); c.moveTo(hitX, 0); c.lineTo(hitX, Y(STRIP_Y)); c.stroke();
+  c.beginPath(); c.moveTo(hitX, 0); c.lineTo(hitX, Y(STRIP_Y) - 14); c.stroke();
   const target = yAt(t, M), d = Math.abs(cursor.y - target);
   const tr = cursor.trail;
   c.lineWidth = 3;
@@ -992,26 +1056,25 @@ function drawStage(t, M) {
   }
   c.strokeStyle = alpha(COL.ivory, .7); c.lineWidth = 2;
   c.beginPath(); c.arc(hitX, Y(target), lw * 1.8, 0, Math.PI * 2); c.stroke();
-  const live = G.state !== 'menu';
   const ballCol = !live ? COL.ivory : d < .05 ? COL.brass : d < .12 ? COL.ivory : COL.bad;
-  const by = Y(cursor.y), br = clamp(h * .022, 9, 15);
+  const by = Y(Math.min(cursor.y, STRIP_Y - .02)), br = clamp(h * .022, 9, 15);
   const gl = c.createRadialGradient(hitX, by, 0, hitX, by, br * 2.6);
   gl.addColorStop(0, alpha(ballCol, .55)); gl.addColorStop(1, alpha(ballCol, 0));
   c.fillStyle = gl; c.beginPath(); c.arc(hitX, by, br * 2.6, 0, Math.PI * 2); c.fill();
   c.fillStyle = ballCol; c.beginPath(); c.arc(hitX, by, br, 0, Math.PI * 2); c.fill();
-  c.strokeStyle = COL.coat; c.lineWidth = 2; c.stroke();
+  c.strokeStyle = spotCol; c.lineWidth = 3; c.stroke();
 
   G.ripples = G.ripples.filter(r => t - r.t0 < .7);
   for (const r of G.ripples) {
     const k = (t - r.t0) / .7;
     c.strokeStyle = alpha(r.col || COL.brass, (1 - k) * .8); c.lineWidth = 3;
-    c.beginPath(); c.arc(hitX, Y(r.y), br + k * (24 + 40 * r.a), 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.arc(hitX, Y(Math.min(r.y, STRIP_Y - .02)), br + k * (24 + 40 * r.a), 0, Math.PI * 2); c.stroke();
   }
 
   // judgement popup
   G.popups = G.popups.filter(p => t - p.t0 < 1.1);
   for (const pp of G.popups) {
-    const k = (t - pp.t0) / 1.1, py = h * .17 - k * 14, px = hitX + (w - hitX) * .42;
+    const k = (t - pp.t0) / 1.1, py = h * .14 - k * 14, px = hitX + (w - hitX) * .42;
     c.globalAlpha = 1 - k * k; c.textAlign = 'center';
     c.font = `italic 800 ${clamp(w / 13, 30, 64)}px ${FD}`;
     c.fillStyle = pp.q >= 1 ? COL.brass : pp.q >= .6 ? COL.winds : COL.bad;
@@ -1024,37 +1087,46 @@ function drawStage(t, M) {
 // The orchestra sits in a strip along the bottom of the stage
 function drawSection(c, i, s, t, w, h) {
   const zoneW = w / 4, stripH = h * (1 - STRIP_Y);
-  const cx = (i + .5) * zoneW, cy = h * STRIP_Y + stripH * .42;
-  const r = clamp(Math.min(zoneW / 17.5, stripH / 7), 3, 9);
+  const cx = (i + .5) * zoneW, cy = h * STRIP_Y + stripH * .45;
+  const r = clamp(Math.min(zoneW / 17.5, stripH / 7.5), 3, 10);
   const col = COL[s.id];
   const inGame = G.state !== 'menu';
-  const awake = !inGame || G.active[s.id];
+  const cued = !inGame || G.active[s.id];
+  const att = inGame ? G.attn[s.id] : 1;
+  const asleep = inGame && (!cued || att < .25), bored = inGame && cued && att >= .25 && att < .5;
+  const aimed = G.aimSec === i && inGame;
   const cue = G.cue[s.id];
   const soon = inGame && cue && !G.active[s.id] && cue.status === 'pending' && G.state === 'playing' && G.pos >= cue.b - 4;
+  const solo = G.state === 'playing' ? soloAt(G.pos) : null;
   const hitAge = t - (G.hit[s.id] ?? -9);
-  const bounce = awake && hitAge >= 0 ? Math.exp(-hitAge * 9) : 0;
-  const busy = awake && hitAge > -1 && hitAge < .9;
+  const bounce = cued && hitAge >= 0 ? Math.exp(-hitAge * 9) : 0;
+  const busy = cued && !asleep && hitAge > -1 && hitAge < .9;
 
-  if (soon) {
+  if (soon || (solo && solo.sec === s.id)) {
     const p = .5 + .5 * Math.sin(t * 7);
     const gl = c.createRadialGradient(cx, cy, 0, cx, cy, zoneW * .5);
     gl.addColorStop(0, alpha(col, .2 + .25 * p)); gl.addColorStop(1, alpha(col, 0));
     c.fillStyle = gl; c.fillRect(cx - zoneW / 2, h * STRIP_Y, zoneW, stripH);
   }
+  if (aimed) {
+    c.fillStyle = alpha(col, .18);
+    c.beginPath(); c.ellipse(cx, cy + r * 1.8, zoneW * .45, r * 2.2, 0, 0, Math.PI * 2); c.fill();
+  }
   const seats = s.id === 'strings' ? [5, 5] : s.id === 'timp' ? [1] : [3, 3];
-  const dx = r * 2.7, dy = r * 2.6;
-  c.globalAlpha = awake ? 1 : .42;
+  const dx = r * 2.7, dy = r * 2.6, stand = aimed && !asleep ? r * .7 : 0;
+  c.globalAlpha = asleep ? .42 : bored ? .75 : 1;
   seats.forEach((count, row) => {
     for (let j = 0; j < count; j++) {
       const off = (j - (count - 1) / 2) * dx + (row ? dx * .5 : 0);
-      let px = cx + off, py = cy + (row - (seats.length - 1) / 2) * dy;
-      if (G.chaos > .35 && awake && inGame) { px += (Math.random() - .5) * G.chaos * 3; py += (Math.random() - .5) * G.chaos * 3; }
-      const sway = awake ? Math.sin(t * 2 + j + row) * .6 : 0;
-      const by = py - bounce * r * .45;
+      let px = cx + off, py = cy + (row - (seats.length - 1) / 2) * dy - stand;
+      if (G.chaos > .35 && cued && inGame) { px += (Math.random() - .5) * G.chaos * 3; py += (Math.random() - .5) * G.chaos * 3; }
+      const sway = !asleep ? Math.sin(t * (aimed ? 4 : 2) + j + row) * (aimed ? 1.4 : .6) : 0;
+      const droop = asleep ? r * .45 : bored ? r * .25 : 0;
+      const by = py - bounce * r * (aimed ? .8 : .45);
       if (s.id === 'timp') {
         c.fillStyle = alpha(COL.timp, .9);
-        c.beginPath(); c.ellipse(px - r * 2.2, py + r * 1.4, r * 1.6, r * .7, 0, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.ellipse(px + r * 2.2, py + r * 1.4, r * 1.4, r * .65, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(px - r * 2.2, py + r * 1.4 + stand, r * 1.6, r * .7, 0, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(px + r * 2.2, py + r * 1.4 + stand, r * 1.4, r * .65, 0, 0, Math.PI * 2); c.fill();
         c.strokeStyle = COL.ivory; c.lineWidth = 1.5;
         const lift = bounce * r;
         c.beginPath(); c.moveTo(px - r * .6, by + r * .4); c.lineTo(px - r * 1.8, py + r * 1 - lift); c.stroke();
@@ -1063,7 +1135,7 @@ function drawSection(c, i, s, t, w, h) {
       c.fillStyle = col;
       c.beginPath(); c.ellipse(px, py + r * 1.15, r * 1.25, r * .8, 0, Math.PI, 0); c.fill();
       c.fillStyle = COL.face;
-      c.beginPath(); c.arc(px + (awake ? sway : r * .45), by + (awake ? 0 : r * .2), r * .78, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(px + sway + droop, by + droop * .5, r * .78, 0, Math.PI * 2); c.fill();
       if (s.id === 'strings') {
         const sw = busy ? Math.sin(t * 9 + j) * r * .8 : 0;
         c.strokeStyle = COL.ivory; c.lineWidth = 1;
@@ -1083,21 +1155,31 @@ function drawSection(c, i, s, t, w, h) {
     }
   });
   c.globalAlpha = 1;
-  if (inGame && !awake && (G.state === 'playing' || G.state === 'ready')) {
-    c.fillStyle = alpha(COL.mist, .8); c.textAlign = 'left';
-    for (let z = 0; z < 3; z++) {
+  const top = cy - (seats.length / 2) * dy - r * 1.5 - stand;
+  if (inGame && (asleep || bored) && (G.state === 'playing' || G.state === 'ready')) {
+    c.fillStyle = alpha(COL.mist, .85); c.textAlign = 'left';
+    if (asleep) for (let z = 0; z < 3; z++) {
       const ph = (t * .6 + z / 3) % 1;
-      c.font = `italic 600 ${9 + ph * 7}px ${FD}`;
+      c.font = `italic 600 ${10 + ph * 8}px ${FD}`;
       c.globalAlpha = 1 - ph;
-      c.fillText('z', cx + r * 3 + ph * r * 3, cy - r - ph * r * 4);
+      c.fillText('z', cx + r * 3 + ph * r * 3, top - ph * r * 4);
+    } else {
+      c.font = `italic 700 ${clamp(r * 1.8, 11, 16)}px ${FD}`;
+      c.fillText(Math.sin(t * 2 + i) > 0 ? 'yawn…' : '…', cx + r * 3, top);
     }
     c.globalAlpha = 1;
   }
   c.textAlign = 'center'; c.fillStyle = col;
-  c.font = `700 ${clamp(zoneW / 13, 9, 11.5)}px ${FB}`;
+  c.font = `${aimed ? 800 : 700} ${clamp(zoneW / 13, 9, 11.5)}px ${FB}`;
   let label = s.name.toUpperCase();
   if (inGame && cue && cue.status !== 'pending') label += ' · ' + {hit:'on cue', late:'late', missed:'missed', 'missed-late':'very late'}[cue.status];
-  c.fillText(label, cx, Math.min(h - 5, h * STRIP_Y + stripH * .95));
+  c.fillText(label, cx, Math.min(h - 10, h * STRIP_Y + stripH * .84));
+  // attention bar under each section
+  if (inGame && cued) {
+    const bw = Math.min(zoneW * .5, 70), bx = cx - bw / 2, byy = Math.min(h - 5, h * STRIP_Y + stripH * .84 + 5);
+    c.fillStyle = alpha(COL.ivory, .15); c.fillRect(bx, byy, bw, 3);
+    c.fillStyle = att > .5 ? col : att > .25 ? COL.warn : COL.bad; c.fillRect(bx, byy, bw * att, 3);
+  }
 }
 
 /* ---------- HUD ---------- */
@@ -1144,6 +1226,7 @@ function frame() {
   const t = nowS(), dt = Math.min(.1, t - lastT); lastT = t;
   if (G.mode !== 'mouse' || !$('#calib').hidden) camFrame(t);
   advance(t, dt);
+  updateAim(dt, t);
   updateCues(dt, t);
   if (G.state === 'fermata' && t - G.fermataT > 4.6) cutoff(t, true);
   const M = pathModel(t);
@@ -1184,7 +1267,7 @@ window.addEventListener('keydown', e => {
     G.keyLevel = clamp(G.keyLevel + (e.code === 'ArrowUp' ? .15 : -.15), .05, 1);
     tip(`Keyboard beats now ${dynName(G.keyLevel)}`, '');
   } else if (/^Digit[1-4]$/.test(e.code)) {
-    tryCue(SECTIONS[+e.code.slice(5) - 1].id, nowS());
+    cursor.x = (+e.code.slice(5) - .5) / 4;
   }
 });
 
@@ -1209,7 +1292,7 @@ PIECES.forEach(p => {
 const MODE_NOTES = {
   motion:'Prop your phone or laptop so the camera sees you from the waist up, stand back about 1–2 m, in good light. The fastest-moving thing in view becomes your baton, so keep the background still.',
   color:'Steadier than motion tracking. You will lock onto a brightly colored object, then conduct with it.',
-  mouse:'Move the mouse up and down over the stage, or drag a finger on it, to follow the line.',
+  mouse:'Move the mouse, or drag a finger, up and down to follow the line and left and right to aim at a section.',
 };
 function setMode(m) {
   G.mode = m;
