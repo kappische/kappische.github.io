@@ -24,15 +24,16 @@ html{box-sizing:border-box;height:100%}
 body{height:100%;margin:0;background:var(--hall);color:var(--ivory);font-family:var(--body);font-size:15px;line-height:1.45;overflow:hidden;-webkit-tap-highlight-color:transparent}
 #app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
 
-.scorebar{background:var(--ivory);color:var(--ink);padding-block:6px 2px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:4px double var(--gold)}
+.scorebar{background:var(--hall-2);color:var(--ivory);padding-block:6px 2px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--rule)}
 .scoremeta{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.scoremeta .work{font-family:var(--display);font-style:italic;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.scoremeta .bar{font-size:11px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;font-variant-numeric:tabular-nums}
-#scoreCanvas{display:block;width:100%;height:88px}
+.scoremeta .work{font-family:var(--display);font-style:italic;font-size:16px;color:var(--mist);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.scoremeta .bar{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+#scoreCanvas{display:block;width:100%;height:100px}
+.stat .val.word{font-style:italic;font-size:21px}
 
 .stage{position:relative;min-height:0;overflow:hidden}
 #stageCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
-#call{position:absolute;left:50%;top:62%;transform:translate(-50%,-50%);width:min(92%,640px);text-align:center;pointer-events:none;
+#call{position:absolute;left:50%;top:20%;transform:translate(-50%,-50%);width:min(92%,640px);text-align:center;pointer-events:none;
   font-family:var(--display);font-style:italic;font-weight:600;font-size:clamp(22px,4.6vw,40px);line-height:1.1;text-wrap:balance;color:var(--ivory);text-shadow:0 2px 18px var(--coat);transition:opacity .25s}
 #tip{position:absolute;left:50%;top:calc(30% + 10px);transform:translateX(-50%);max-width:92%;pointer-events:none;
   font-size:14px;font-weight:600;letter-spacing:.02em;padding:6px 14px;border-radius:999px;background:var(--hall-2);border:1px solid var(--rule);color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .3s}
@@ -51,9 +52,6 @@ body{height:100%;margin:0;background:var(--hall);color:var(--ivory);font-family:
 .ok{color:var(--good)} .hi{color:var(--warn)} .lo{color:var(--bad)}
 .meter{width:96px;height:6px;background:var(--rule);border-radius:3px;overflow:hidden;margin-top:6px}
 .meter i{display:block;height:100%;width:100%;background:var(--good);transition:width .2s,background .2s}
-.metro{width:9px;height:9px;border-radius:50%;background:var(--gold);opacity:.25}
-.metro.on{animation:tick var(--beat,0.5s) linear infinite}
-@keyframes tick{0%{opacity:1;transform:scale(1.25)}25%{opacity:.25;transform:scale(1)}100%{opacity:.25}}
 .hud .spacer{flex:1}
 
 .btn{font:inherit;font-weight:600;border:1px solid var(--gold);background:transparent;color:var(--ivory);padding:9px 16px;border-radius:999px;cursor:pointer}
@@ -107,13 +105,12 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
   .brow{grid-template-columns:96px 1fr 42px}
   #tip{font-size:12.5px}
 }
-@media (prefers-reduced-motion:reduce){.metro.on{animation:none;opacity:.8}}
 </style>
 
 <div id="app">
   <header class="scorebar">
     <div class="scoremeta"><span class="work" id="workLine">Ode to Joy · Beethoven</span><span class="bar" id="barLine">Bar 1 / 32</span></div>
-    <canvas id="scoreCanvas" aria-label="Scrolling score with markings and cues"></canvas>
+    <canvas id="scoreCanvas" aria-label="Beat lane: orbs to beat on, cue bars and hints"></canvas>
   </header>
 
   <main class="stage" id="stage">
@@ -144,11 +141,11 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
         <details class="how" open>
           <summary>How to conduct</summary>
           <ol>
-            <li>Give one preparation beat. The orchestra starts on your second beat, at the speed you set.</li>
-            <li>Bounce once per beat: down, then up. Stop beating and the orchestra waits for you.</li>
-            <li>Bigger bounces play louder. Match the dynamics on the score, from a small <i>p</i> to a huge <i>ff</i>.</li>
-            <li>When a section glows, lift the baton into the band above it and hold for a moment to bring it in.</li>
-            <li>At the end, hold the final chord, then give one more beat to cut it off.</li>
+            <li>Watch the lane at the top. Bounce your baton down and up each time an orb reaches the ring. Start on a Ready orb, and the orchestra joins on Go!</li>
+            <li>Big orbs want big, loud beats. Small orbs want small, soft ones.</li>
+            <li>A colored bar that says Lift to Brass means: raise your baton into the brass band above the orchestra and hold it there.</li>
+            <li>Not sure? Copy the ghost baton on stage. It shows when to beat, how big, and where to point.</li>
+            <li>On the last orb, hold the final chord, then beat once more on Cut!</li>
           </ol>
         </details>
         <p class="fine">Public-domain scores, played by an orchestra synthesized live in your browser. No recordings, nothing to license. Keyboard works too: <kbd>Space</kbd> beats, <kbd>↑</kbd> <kbd>↓</kbd> louder and softer, <kbd>1</kbd>–<kbd>4</kbd> cue a section.</p>
@@ -177,10 +174,11 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
   </main>
 
   <footer class="hud">
-    <div class="stat"><span class="lbl">Tempo</span><span class="val"><span id="bpm">—</span><span class="metro" id="metro"></span></span><span class="sub" id="bpmTarget">target ♩ 108–132</span></div>
-    <div class="stat"><span class="lbl">Dynamics</span><span class="val dyn" id="dynNow">—</span><span class="sub" id="dynMark">marked p</span></div>
+    <div class="stat"><span class="lbl">Speed</span><span class="val word" id="speedWord">—</span><span class="sub" id="bpmLine">aim ♩ 108–132</span></div>
+    <div class="stat"><span class="lbl">Beat size</span><span class="val word" id="sizeWord">—</span><span class="sub" id="sizeAim">aim: Soft</span></div>
+    <div class="stat"><span class="lbl">Combo</span><span class="val" id="combo">×0</span><span class="sub" id="bestCombo">best 0</span></div>
     <div class="stat"><span class="lbl">Ensemble</span><div class="meter"><i id="ensMeter"></i></div><span class="sub" id="ensText">together</span></div>
-    <div class="stat"><span class="lbl">Score</span><span class="val" id="scoreNow">—</span></div>
+    <div class="stat"><span class="lbl">Score</span><span class="val" id="scoreNow">0</span></div>
     <span class="spacer"></span>
     <button class="btn" id="stopBtn" hidden>Stop</button>
   </footer>
@@ -225,6 +223,7 @@ const SECTIONS = [
 const DYN = {pp:.15, p:.3, mp:.45, mf:.6, f:.78, ff:.95};
 const DYN_ORDER = ['pp','p','mp','mf','f','ff'];
 const dynName = v => DYN_ORDER.reduce((best, k) => Math.abs(DYN[k] - v) < Math.abs(DYN[best] - v) ? k : best, 'pp');
+const DYN_WORD = {pp:'Whisper', p:'Soft', mp:'Gentle', mf:'Medium', f:'Loud', ff:'Huge'};
 
 /* ---------- Pieces (public domain) ---------- */
 function buildOde() {
@@ -429,6 +428,7 @@ const G = {
   dyn:.35, chaos:0, ibis:[], lastIbi:0, waitingSince:0,
   stats:null, fermataVoices:[], fermataT:0, cutoffScore:0,
   ripples:[], keyLevel:.5, lastTip:0, lastEarly:0,
+  readyT0:0, combo:0, bestCombo:0, points:0, popups:[], hitMarks:[],
 };
 const cursor = {x:.5, y:.62, trail:[]};
 const CUE_Y = .3;
@@ -437,6 +437,24 @@ function markAt(p) {
   const m = {dyn:'p', tempo:[60,120], text:''};
   for (const k of G.piece.marks) if (k.b <= p + .01) { if (k.dyn) m.dyn = k.dyn; if (k.tempo) m.tempo = k.tempo; if (k.text) m.text = k.text; }
   return m;
+}
+// seconds per beat the lane asks for at beat j (middle of the marked tempo range)
+const idealAt = j => { const [lo, hi] = markAt(j).tempo; return 120 / (lo + hi); };
+// When the lane expects each upcoming beat, measured from the player's last real beat.
+// If the player is late, the next orb waits just past the ring instead of sliding away.
+function laneClock(t) {
+  const playing = G.state === 'playing';
+  const k = playing ? G.k : -1, base = playing ? G.tGest : G.prepT;
+  const iv1 = idealAt(k + 1);
+  let tn = base + iv1;
+  if (t > tn + .3 * iv1) tn = t - .3 * iv1;
+  const time = j => {
+    if (j <= k) return base - (k - j) * idealAt(Math.max(0, j));
+    let tt = tn;
+    for (let i = k + 2; i <= j; i++) tt += idealAt(i);
+    return tt;
+  };
+  return {k, base, time};
 }
 
 /* ---------- Beat detection: one down-up bounce = one beat ---------- */
@@ -473,11 +491,11 @@ function feed(x, y, t) {
 /* ---------- Conducting engine ---------- */
 function onBeat(t, amp) {
   const level = clamp((amp - .03) / .3, .06, 1);
-  G.ripples.push({x:cursor.x, y:cursor.y, t0:nowS(), a:level});
-  if (G.state === 'ready') { G.prepT = t; G.state = 'prepped'; G.dyn = level; applyDyn(); say('…and'); return; }
+  if (G.state === 'ready') { G.prepT = t; G.state = 'prepped'; G.dyn = level; applyDyn(); say(''); ripple(level, COL.mist); popup('Ready…', 'now beat on Go!', .6); return; }
   if (G.state === 'prepped') {
     const ibi = t - G.prepT;
-    if (ibi < .25 || ibi > 2.6) { G.prepT = t; return; }
+    if (ibi < .25 || ibi > 2.6) { G.prepT = t; ripple(level, COL.mist); return; }
+    judge(t, G.prepT + idealAt(0), idealAt(0), level, DYN[markAt(0).dyn]);
     G.T = clamp(1 / ibi, .5, 3.5); G.rate = G.T;
     G.state = 'playing'; G.k = 0; G.tGest = t; G.pos = 0; G.lastIbi = ibi; G.ibis = [ibi];
     G.dyn = lerp(G.dyn, level, .6); applyDyn(); say('');
@@ -488,6 +506,7 @@ function onBeat(t, amp) {
 
   const ibi = t - G.tGest;
   if (ibi < .2) return;
+  judge(t, G.tGest + idealAt(G.k + 1), idealAt(G.k + 1), level, DYN[markAt(G.k + 1).dyn]);
   const longPause = ibi > 1.8 / G.T;
   G.T = clamp(lerp(G.T, 1 / ibi, longPause ? .2 : .55), .4, 4);
   G.k = Math.min(G.k + 1, Math.floor(G.pos) + 2);
@@ -504,30 +523,41 @@ function onBeat(t, amp) {
   G.chaos = lerp(G.chaos, clamp((sd / mean) * 3 + extreme, 0, 1), .5);
   for (const s of SECTIONS) G.jitter[s.id] = (Math.random() - .5) * 2 * G.chaos * .07;
 
-  // scoring for this beat
-  const bpm = 60 * G.T, [lo, hi] = mk.tempo;
-  const tempoS = bpm < lo ? clamp(1 - (lo - bpm) / (lo * .25), 0, 1) : bpm > hi ? clamp(1 - (bpm - hi) / (hi * .25), 0, 1) : 1;
-  const steadyS = longPause ? 0 : clamp(1 - Math.abs(ibi - G.lastIbi) / G.lastIbi * 3, 0, 1);
-  const dynS = clamp(1 - Math.abs(G.dyn - DYN[mk.dyn]) * 2.4, 0, 1);
-  const st = G.stats; st.beats++; st.tempo += tempoS; st.steady += steadyS; st.dyn += dynS;
   G.lastIbi = ibi;
-  coach(bpm, lo, hi, mk);
+  coach(60 * G.T, mk.tempo[0], mk.tempo[1]);
 
   if (G.k >= G.piece.length) startFermata(t);
+}
+function ripple(a, col) { G.ripples.push({x:cursor.x, y:cursor.y, t0:nowS(), a, col}); }
+function popup(word, sub, q) { G.popups = [{word, sub, q, t0:nowS()}]; }
+// Rhythm-game judgement: timing against the lane, size against the marked dynamics
+function judge(t, expected, ideal, level, target) {
+  const e = (t - expected) / ideal, a = Math.abs(e);
+  let word, q;
+  if (a < .12) { word = 'Perfect!'; q = 1; }
+  else if (a < .25) { word = 'Good'; q = .6; }
+  else { word = e < 0 ? 'Early' : 'Late'; q = .2; }
+  const sizeOk = Math.abs(level - target) < .22;
+  G.combo = q >= .6 ? G.combo + 1 : 0;
+  G.bestCombo = Math.max(G.bestCombo, G.combo);
+  const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
+  G.points += Math.round((q * 100 + (sizeOk ? 40 : 0)) * mult);
+  G.stats.n++; G.stats.timing += q; G.stats.size += sizeOk ? 1 : clamp(1 - Math.abs(level - target) * 2, 0, 1);
+  G.hitMarks.push({t, q});
+  const sub = !sizeOk ? (level < target ? 'Bigger!' : 'Smaller!') : G.combo >= 8 ? `Combo ×${G.combo}` : '';
+  popup(word, sub, q);
+  ripple(level, q >= 1 ? COL.brass : q >= .6 ? COL.winds : COL.bad);
 }
 function applyDyn() {
   if (!AC) return;
   OUT.dynG.gain.setTargetAtTime(.07 + .93 * Math.pow(G.dyn, 1.35), AC.currentTime, .12);
 }
-function coach(bpm, lo, hi, mk) {
-  const t = nowS(); if (t - G.lastTip < 2.6) return;
-  const target = DYN[mk.dyn];
+function coach(bpm, lo, hi) {
+  const t = nowS(); if (t - G.lastTip < 3.5) return;
   let msg = null, cls = 'warn';
-  if (bpm > hi * 1.08) msg = bpm > hi * 1.4 ? 'Way too fast. The violinists’ bows are smoking.' : 'A little fast. Ease off.';
-  else if (bpm < lo * .92) msg = bpm < lo * .65 ? 'Too slow. The brass are nodding off.' : 'A little slow. Push on.';
-  else if (G.dyn < target - .2) msg = `Bigger beats. It's marked ${mk.dyn}.`;
-  else if (G.dyn > target + .2) msg = `Smaller beats. It's marked ${mk.dyn}.`;
-  else if (G.chaos > .45) { msg = 'Keep your beats even. The orchestra is drifting apart.'; cls = 'bad'; }
+  if (bpm > hi * 1.4) msg = 'Way too fast! The violinists’ bows are smoking.';
+  else if (bpm < lo * .65) msg = 'So slow… the brass are nodding off.';
+  else if (G.chaos > .5) { msg = 'Wobbly! Beat with the orbs to pull the orchestra together.'; cls = 'bad'; }
   if (msg) { tip(msg, cls); G.lastTip = t; }
 }
 
@@ -536,8 +566,9 @@ function startGame() {
   OUT.dynG.gain.cancelScheduledValues(AC.currentTime);
   OUT.dynG.gain.setValueAtTime(.3, AC.currentTime);
   const p = G.piece;
-  Object.assign(G, {state:'ready', k:0, pos:0, evIdx:0, chaos:0, ibis:[], dyn:.35, fermataVoices:[], cutoffScore:0, ripples:[], dwell:[0,0,0,0], lastTip:0});
-  G.stats = {beats:0, tempo:0, steady:0, dyn:0};
+  Object.assign(G, {state:'ready', k:0, pos:0, evIdx:0, chaos:0, ibis:[], dyn:.35, fermataVoices:[], cutoffScore:0, ripples:[], dwell:[0,0,0,0], lastTip:0,
+    readyT0:nowS() + 1.2, combo:0, bestCombo:0, points:0, popups:[], hitMarks:[]});
+  G.stats = {n:0, timing:0, size:0};
   G.active = {}; G.cue = {}; G.hit = {};
   for (const s of SECTIONS) { G.active[s.id] = true; G.jitter[s.id] = 0; }
   for (const c of p.cues) { G.active[c.sec] = false; G.cue[c.sec] = {b:c.b, status:'pending'}; }
@@ -545,7 +576,7 @@ function startGame() {
   $('#menu').hidden = true; $('#results').hidden = true; $('#calib').hidden = true;
   $('#stopBtn').hidden = false;
   $('#workLine').textContent = `${p.title} · ${p.composer}`;
-  say(G.mode === 'mouse' ? 'Bounce the pointer once to set up the beat' : 'Bounce the baton once to set up the beat');
+  say('Beat when an orb hits the ring');
   tip('', '');
   try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
   updateHud(true);
@@ -558,11 +589,14 @@ function startFermata(t) {
     for (const n of notes) G.fermataVoices.push(playNote(sec, midi(n), at, 40, .9, 0, true));
     G.hit[sec] = nowS();
   }
-  say('Hold it… then cut off with one more beat');
+  popup('Hold it…', 'then beat on Cut!', 1);
 }
 function cutoff(t) {
-  const held = t - G.fermataT;
-  G.cutoffScore = held < 1 ? .4 : held <= 6 ? 1 : .5;
+  const off = Math.abs(t - G.fermataT - 2.5);
+  G.cutoffScore = off < .45 ? 1 : off < 1.1 ? .6 : .25;
+  G.points += Math.round(G.cutoffScore * 400);
+  popup(G.cutoffScore === 1 ? 'Perfect cutoff!' : G.cutoffScore > .5 ? 'Nice cutoff' : 'Cut!', '', G.cutoffScore);
+  ripple(1, COL.brass);
   const at = AC.currentTime;
   G.fermataVoices.forEach(v => v.release(at)); G.fermataVoices = [];
   G.state = 'done'; say('');
@@ -585,9 +619,9 @@ function cueScore() {
   return cs.reduce((a, c) => a + v[c.status], 0) / cs.length;
 }
 function finalScores() {
-  const st = G.stats, n = Math.max(1, st.beats);
-  const parts = {tempo:st.tempo / n, steady:st.steady / n, dyn:st.dyn / n, cues:cueScore(), cutoff:G.cutoffScore};
-  const total = parts.tempo * .32 + parts.steady * .18 + parts.dyn * .25 + parts.cues * .18 + parts.cutoff * .07;
+  const st = G.stats, n = Math.max(1, st.n);
+  const parts = {timing:st.timing / n, size:st.size / n, cues:cueScore(), cutoff:G.cutoffScore};
+  const total = parts.timing * .45 + parts.size * .3 + parts.cues * .17 + parts.cutoff * .08;
   return {parts, total:Math.round(total * 100)};
 }
 function showResults() {
@@ -601,9 +635,9 @@ function showResults() {
     [0,  'D', 'The audience has left', 'Only the ushers remain. One of them is booing.'],
   ];
   const [, g, head, line] = tiers.find(x => total >= x[0]);
-  $('#resWork').textContent = `${G.piece.title} · ${G.piece.composer} · ${total} / 100`;
+  $('#resWork').textContent = `${G.piece.title} · ${G.points.toLocaleString()} points · best combo ×${G.bestCombo}`;
   $('#resGrade').textContent = g; $('#resHead').textContent = head; $('#resLine').textContent = line;
-  const rows = [['Tempo', parts.tempo], ['Steadiness', parts.steady], ['Dynamics', parts.dyn], ['Cues', parts.cues], ['Final cutoff', parts.cutoff]];
+  const rows = [['Timing', parts.timing], ['Beat size', parts.size], ['Cues', parts.cues], ['Final cutoff', parts.cutoff]];
   const box = $('#resRows'); box.textContent = '';
   for (const [label, v] of rows) {
     const r = document.createElement('div'); r.className = 'brow';
@@ -612,11 +646,10 @@ function showResults() {
     box.appendChild(r);
   }
   const TIPS = {
-    tempo:`Watch the tempo target in the corner. This piece wants ♩ ${G.piece.marks[0].tempo[0]}–${G.piece.marks[0].tempo[1]}, and slower where it says rit.`,
-    steady:'Keep the spacing between beats even. Uneven beats pull the sections apart.',
-    dyn:'Size your bounces to the marking: tiny for p, as big as you can for ff.',
-    cues:'When a section glows, lift the baton into the band above it and hold it there for a moment.',
-    cutoff:'Hold the last chord for two or three seconds, then give one clean beat.',
+    timing:'Beat the moment each orb touches the ring. The ghost baton on stage bottoms out right on the beat.',
+    size:'Match your bounce to the orb: tiny orbs, tiny beats; huge orbs, swing big.',
+    cues:'When a Lift bar reaches the ring, raise your baton into that section’s band and hold it for a moment.',
+    cutoff:'Hold the final chord until the Cut! orb reaches the ring, then give one clean beat.',
   };
   const worst = Object.entries(parts).sort((a, b) => a[1] - b[1])[0][0];
   $('#resTip').textContent = 'Next time: ' + TIPS[worst];
@@ -635,14 +668,14 @@ function tryCue(sec, t) {
   const c = G.cue[sec];
   if (!c || G.active[sec]) return;
   if (G.state !== 'playing') return;
-  if (c.status === 'pending' && G.pos < c.b - 4) {
+  if (c.status === 'pending' && G.pos < c.b - 4.5) {
     if (t - G.lastEarly > 2.5) { tip(`Not yet. The ${secName(sec)} come in at bar ${c.b / G.piece.meter + 1}.`, 'warn'); G.lastEarly = t; G.lastTip = t; }
     return;
   }
   G.active[sec] = true; G.hit[sec] = t;
   if (c.status === 'missed') { c.status = 'missed-late'; tip(`The ${secName(sec)} wake up, very late.`, 'warn'); }
-  else if (G.pos <= c.b + .3) { c.status = 'hit'; tip(`${secName(sec, true)} in, right on cue!`, 'good'); }
-  else { c.status = 'late'; tip(`${secName(sec, true)} in, a little late.`, 'warn'); }
+  else if (G.pos <= c.b + .3) { c.status = 'hit'; G.points += 500; popup(`${secName(sec, true)} in!`, 'Perfect cue +500', 1); }
+  else { c.status = 'late'; G.points += 200; popup(`${secName(sec, true)} in`, 'a bit late +200', .6); }
   G.lastTip = t;
   G.ripples.push({x:cursor.x, y:cursor.y, t0:t, a:1, col:COL[sec]});
 }
@@ -789,6 +822,7 @@ const COL = {
   strings:tok('--strings'), winds:tok('--winds'), brass:tok('--brass'), timp:tok('--timp'),
   gold:tok('--gold'), ivory:tok('--ivory'), ink:tok('--ink'), face:tok('--face'), coat:tok('--coat'),
   floor:tok('--floor'), hall:tok('--hall'), velvet:tok('--velvet'), line:tok('--paper-line'), dim:tok('--dim'), mist:tok('--mist'),
+  bad:tok('--bad'), rule:tok('--rule'),
 };
 const FD = '"Bodoni Moda","Bodoni 72",Didot,Georgia,serif';
 const FB = '"Schibsted Grotesk",system-ui,sans-serif';
@@ -829,6 +863,7 @@ function drawStage(t) {
 
   SECTIONS.forEach((s, i) => drawSection(c, i, s, t, w, h, bandH));
   drawConductor(c, t, w, h);
+  drawGhost(c, t, w, h);
 
   // ripples
   G.ripples = G.ripples.filter(r => t - r.t0 < .7);
@@ -846,6 +881,66 @@ function drawStage(t) {
   const glow = c.createRadialGradient(cursor.x * w, cursor.y * h, 0, cursor.x * w, cursor.y * h, 16);
   glow.addColorStop(0, alpha(COL.ivory, .95)); glow.addColorStop(1, alpha(COL.brass, 0));
   c.fillStyle = glow; c.beginPath(); c.arc(cursor.x * w, cursor.y * h, 16, 0, Math.PI * 2); c.fill();
+
+  // judgement popup
+  G.popups = G.popups.filter(p => t - p.t0 < 1.1);
+  for (const pp of G.popups) {
+    const k = (t - pp.t0) / 1.1, y = h * .4 - k * 18;
+    c.globalAlpha = 1 - k * k; c.textAlign = 'center';
+    c.font = `italic 800 ${clamp(w / 14, 28, 56)}px ${FD}`;
+    c.fillStyle = pp.q >= 1 ? COL.brass : pp.q >= .6 ? COL.winds : COL.bad;
+    c.fillText(pp.word, w / 2, y);
+    if (pp.sub) { c.font = `700 ${clamp(w / 45, 12, 16)}px ${FB}`; c.fillStyle = COL.ivory; c.fillText(pp.sub.toUpperCase(), w / 2, y + clamp(w / 30, 18, 28)); }
+    c.globalAlpha = 1;
+  }
+}
+
+/* ---------- Ghost baton: shows when, how big and where ---------- */
+const ghost = {x:.5, y:.74, ok:false};
+function cueNow() {
+  if (G.state !== 'playing') return null;
+  for (const [sec, cu] of Object.entries(G.cue)) if (!G.active[sec] && cu.status === 'pending' && G.pos >= cu.b - 3) return sec;
+  return null;
+}
+function ghostTarget(t) {
+  const st = G.state;
+  if (st !== 'ready' && st !== 'prepped' && st !== 'playing') return null;
+  const sec = cueNow();
+  if (sec) { const z = SECTIONS.findIndex(s => s.id === sec); return {x:(z + .5) / 4, y:CUE_Y * .45, amp:0, phase:.5, sec}; }
+  let prev, next, j;
+  if (st === 'ready') {
+    const iv = idealAt(0), ph = (((t - G.readyT0) / iv) % 1 + 1) % 1;
+    prev = t - ph * iv; next = prev + iv; j = 0;
+  } else {
+    const clk = laneClock(t); j = clk.k + 1; prev = clk.base; next = clk.time(j);
+  }
+  const phase = clamp((t - prev) / Math.max(.05, next - prev), 0, 1);
+  const amp = .03 + DYN[markAt(Math.min(j, G.piece.length)).dyn] * .3;
+  return {x:.5, y:.74 - amp * Math.sin(Math.PI * phase), amp, phase};
+}
+function drawGhost(c, t, w, h) {
+  const g = ghostTarget(t);
+  if (!g) { ghost.ok = false; return; }
+  if (!ghost.ok) { ghost.x = g.x; ghost.y = g.y; ghost.ok = true; }
+  const k = g.sec || Math.abs(ghost.x - g.x) > .02 ? .12 : .6;
+  ghost.x = lerp(ghost.x, g.x, k); ghost.y = lerp(ghost.y, g.y, k);
+  const gx = ghost.x * w, gy = ghost.y * h;
+  if (!g.sec) {
+    c.strokeStyle = alpha(COL.ivory, .18); c.setLineDash([3, 5]); c.lineWidth = 2;
+    c.beginPath(); c.moveTo(gx, (.74 - g.amp) * h); c.lineTo(gx, .74 * h); c.stroke(); c.setLineDash([]);
+    const hitGlow = Math.max(0, 1 - Math.min(g.phase, 1 - g.phase) * 8);
+    c.strokeStyle = alpha(COL.brass, .3 + .6 * hitGlow); c.lineWidth = 2;
+    c.beginPath(); c.ellipse(gx, .74 * h + 6, 16 + 8 * hitGlow, 5 + 2 * hitGlow, 0, 0, Math.PI * 2); c.stroke();
+  } else {
+    c.font = `italic 700 ${clamp(w / 40, 13, 18)}px ${FD}`; c.fillStyle = COL[g.sec]; c.textAlign = 'center';
+    c.fillText('lift here!', gx, gy + 30);
+  }
+  c.fillStyle = alpha(COL.ivory, .28); c.strokeStyle = alpha(COL.ivory, .75); c.lineWidth = 2;
+  c.beginPath(); c.arc(gx, gy, 13, 0, Math.PI * 2); c.fill(); c.stroke();
+  if (G.state === 'ready' || (G.state === 'playing' && G.k < 6)) {
+    c.font = `600 11px ${FB}`; c.fillStyle = alpha(COL.ivory, .7); c.textAlign = 'left';
+    c.fillText('copy me', gx + 20, gy + 4);
+  }
 }
 
 function drawSection(c, i, s, t, w, h, bandH) {
@@ -961,70 +1056,116 @@ function drawConductor(c, t, w, h) {
   c.lineCap = 'butt';
 }
 
-const LETTER = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
-function drawScore() {
+/* ---------- Beat lane: orbs slide into the ring, like a rhythm game ---------- */
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function drawLane(t) {
   const {c, w, h} = fit(scoreC);
   c.clearRect(0, 0, w, h);
-  const p = G.piece, meter = p.meter;
-  const pos = G.state === 'menu' ? 0 : G.pos;
-  const ppb = clamp(w / 15, 30, 64), playX = Math.min(w * .2, 150);
-  const gap = 6.5, top = 30, bottom = top + gap * 4;
-  c.strokeStyle = COL.line; c.lineWidth = 1;
-  for (let l = 0; l < 5; l++) { c.beginPath(); c.moveTo(0, top + l * gap); c.lineTo(w, top + l * gap); c.stroke(); }
-  const b0 = Math.floor(pos - playX / ppb) - 1, b1 = Math.ceil(pos + (w - playX) / ppb) + 1;
-  const X = b => playX + (b - pos) * ppb;
+  const p = G.piece, st = G.state;
+  const hitX = clamp(w * .13, 52, 110), ahead = 3.2, pps = (w - hitX) / ahead;
+  const X = tt => hitX + (tt - t) * pps;
+  const mainY = h * .66, upY = h * .2, railH = 23;
 
-  c.textAlign = 'left';
-  for (let b = Math.max(0, b0); b <= Math.min(p.length, b1); b++) {
-    if (b % meter) continue;
-    const x = X(b) - 4;
-    c.strokeStyle = COL.ink; c.lineWidth = b === p.length ? 3 : 1;
-    c.beginPath(); c.moveTo(x, top); c.lineTo(x, bottom); c.stroke();
-    if (b < p.length) { c.fillStyle = COL.dim; c.font = `500 9.5px ${FB}`; c.fillText(String(b / meter + 1), x + 2, top - 3); }
+  c.fillStyle = alpha(COL.ivory, .05); c.fillRect(0, mainY - railH, w, railH * 2);
+  c.strokeStyle = alpha(COL.gold, .35); c.lineWidth = 1;
+  for (const y of [mainY - railH, mainY + railH]) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+
+  const gemFor = (j, tt) => {
+    const d = DYN[markAt(j).dyn];
+    return {t:tt, r:6 + d * 13, col:d >= .78 ? COL.timp : d >= .45 ? COL.gold : COL.mist, label:String(j % p.meter + 1), word:'', down:j % p.meter === 0};
+  };
+  const gems = [], bars = [], banners = [];
+  let hold = null;
+  if (st === 'menu' || st === 'ready') {
+    const iv = idealAt(0);
+    const start = st === 'menu' ? t + .4 : G.readyT0 + Math.max(0, Math.ceil((t - G.readyT0 - .3 * iv) / iv)) * iv;
+    for (let i = 0; i < 6; i++) gems.push({t:start + i * iv, r:11, col:COL.mist, label:'', word:i === 0 ? 'Ready' : '', down:false});
+  } else if (st === 'prepped' || st === 'playing') {
+    const clk = laneClock(t);
+    for (let j = clk.k + 1; j <= p.length; j++) {
+      const tt = clk.time(j);
+      if (tt > t + ahead + .3) break;
+      const g = gemFor(j, tt);
+      if (j === 0) { g.word = 'Go!'; g.r = Math.max(g.r, 14); }
+      if (j === p.length) { g.word = 'Last'; hold = {from:tt, to:tt + 2.5}; }
+      gems.push(g);
+    }
+    for (const [sec, cu] of Object.entries(G.cue)) {
+      if (G.active[sec] || cu.status !== 'pending') continue;
+      bars.push({from:clk.time(cu.b - 4), to:clk.time(cu.b + 1), sec});
+    }
+    let prevDyn = p.marks[0].dyn;
+    for (const m of p.marks.slice(1)) {
+      const words = [];
+      if (m.dyn) { words.push(DYN[m.dyn] > DYN[prevDyn] ? 'Louder!' : 'Softer…'); prevDyn = m.dyn; }
+      if (m.text === 'rit.') words.push('Slow down…');
+      if (m.b > clk.k && words.length) banners.push({t:clk.time(m.b), text:words.join('  ')});
+    }
+  } else if (st === 'fermata') {
+    hold = {from:G.fermataT, to:G.fermataT + 2.5};
   }
-  // melody note heads
-  const stepY = st => bottom - (st - 30) * gap / 2;
-  for (const n of p.melody) {
-    if (n.b < b0 || n.b > b1) continue;
-    const x = X(n.b) + 4, st = (Math.floor(n.m / 12) - 1) * 7 + LETTER[n.m % 12], y = stepY(st);
-    c.strokeStyle = COL.ink; c.lineWidth = 1;
-    for (let l = 28; l >= st; l -= 2) if (l < 30) { c.beginPath(); c.moveTo(x - 6, stepY(l)); c.lineTo(x + 6, stepY(l)); c.stroke(); }
-    for (let l = 40; l <= st; l += 2) { c.beginPath(); c.moveTo(x - 6, stepY(l)); c.lineTo(x + 6, stepY(l)); c.stroke(); }
-    c.save(); c.translate(x, y); c.rotate(-.35);
-    c.beginPath(); c.ellipse(0, 0, 4.1, 2.9, 0, 0, Math.PI * 2);
-    if (n.d >= 2) { c.lineWidth = 1.3; c.stroke(); } else { c.fillStyle = COL.ink; c.fill(); }
-    c.restore();
-    const up = st < 34;
-    c.beginPath(); c.moveTo(up ? x + 3.6 : x - 3.6, y); c.lineTo(up ? x + 3.6 : x - 3.6, up ? y - 19 : y + 19); c.stroke();
-    if (n.d <= .5) { c.beginPath(); c.moveTo(up ? x + 3.6 : x - 3.6, up ? y - 19 : y + 19); c.quadraticCurveTo(up ? x + 9 : x + 2, up ? y - 12 : y + 12, up ? x + 8 : x + 2, up ? y - 8 : y + 8); c.stroke(); }
+  if (hold) {
+    const cutT = st === 'fermata' && t > hold.to + .3 ? t - .3 : hold.to;
+    const x0 = Math.max(hitX, X(hold.from)), x1 = X(cutT);
+    if (x1 > x0) {
+      c.fillStyle = alpha(COL.ivory, .14); roundRect(c, x0, mainY - 9, x1 - x0, 18, 9); c.fill();
+      c.fillStyle = alpha(COL.ivory, .8); c.font = `italic 700 13px ${FD}`; c.textAlign = 'left';
+      if (x1 - x0 > 60) c.fillText('Hold…', x0 + 14, mainY + 4.5);
+    }
+    gems.push({t:cutT, r:14, col:COL.velvet, label:'', word:'Cut!', down:true});
   }
-  // markings
-  for (const m of p.marks) {
-    const x = X(m.b); if (x < -80 || x > w + 10) continue;
-    if (m.dyn) { c.fillStyle = COL.ink; c.font = `italic 800 18px ${FD}`; c.fillText(m.dyn, x, bottom + 22); }
-    if (m.text) { c.fillStyle = COL.ink; c.font = `italic 600 13px ${FD}`; c.fillText(m.text + (m.tempo ? `  ♩ ${m.tempo[0]}–${m.tempo[1]}` : ''), x + 14, 12); }
+
+  // cue bars ride the upper track
+  for (const b of bars) {
+    const x0 = X(b.from), x1 = X(b.to);
+    if (x1 < 0 || x0 > w) continue;
+    const live = x0 <= hitX && x1 >= hitX, col = COL[b.sec];
+    c.fillStyle = alpha(col, live ? .95 : .55); roundRect(c, x0, upY - 11, x1 - x0, 22, 11); c.fill();
+    c.fillStyle = COL.ink; c.font = `800 11.5px ${FB}`; c.textAlign = 'left';
+    c.fillText(`↑ LIFT TO ${SECTIONS.find(s => s.id === b.sec).name.toUpperCase()}`, Math.max(x0, hitX - 40) + 10, upY + 4);
   }
-  for (const q of p.cues) {
-    const x = X(q.b - 4); if (x < -90 || x > w + 10) continue;
-    const label = 'cue ' + SECTIONS.find(s => s.id === q.sec).name.toLowerCase();
-    c.font = `700 10px ${FB}`; const tw = c.measureText(label).width + 10;
-    const state = G.cue[q.sec]?.status;
-    c.fillStyle = state && state !== 'pending' && G.state !== 'menu' ? COL.line : COL.velvet;
-    c.fillRect(x, bottom + 9, tw, 15);
-    c.fillStyle = COL.ivory; c.fillText(label, x + 5, bottom + 20);
-    c.strokeStyle = COL.velvet; c.beginPath(); c.moveTo(x, bottom + 9); c.lineTo(X(q.b), bottom + 9); c.stroke();
+  for (const bn of banners) {
+    const x = X(bn.t); if (x < hitX - 20 || x > w + 10) continue;
+    c.font = `italic 700 15px ${FD}`; c.textAlign = 'left';
+    const tw = c.measureText(bn.text).width + 18;
+    c.fillStyle = alpha(COL.ivory, .1); roundRect(c, x - 6, upY - 11, tw, 22, 11); c.fill();
+    c.fillStyle = COL.ivory; c.fillText(bn.text, x + 3, upY + 5);
   }
-  // fermata at the end
-  const fx = X(p.length) + 6;
-  if (fx < w + 20) {
-    c.strokeStyle = COL.ink; c.lineWidth = 1.5;
-    c.beginPath(); c.arc(fx, top - 2, 7, Math.PI, 0); c.stroke();
-    c.fillStyle = COL.ink; c.beginPath(); c.arc(fx, top - 4, 1.6, 0, Math.PI * 2); c.fill();
+
+  // the ring
+  const next = gems.find(g => g.t >= t - .3);
+  const near = next ? clamp(1 - Math.abs(next.t - t) / .22, 0, 1) : 0;
+  c.fillStyle = alpha(COL.gold, .08 + near * .25);
+  c.beginPath(); c.arc(hitX, mainY, 24, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = COL.ivory; c.lineWidth = 2 + near * 2;
+  c.beginPath(); c.arc(hitX, mainY, 24, 0, Math.PI * 2); c.stroke();
+  c.font = `700 9.5px ${FB}`; c.fillStyle = COL.dim; c.textAlign = 'center';
+  c.fillText('BEAT', hitX, mainY + railH + 11);
+
+  // your past beats drift away to the left
+  G.hitMarks = G.hitMarks.filter(m => t - m.t < 2);
+  for (const m of G.hitMarks) {
+    c.fillStyle = m.q >= 1 ? COL.brass : m.q >= .6 ? COL.winds : COL.bad;
+    c.beginPath(); c.arc(X(m.t), mainY, 5, 0, Math.PI * 2); c.fill();
   }
-  // playhead
-  c.fillStyle = alpha(COL.velvet, .12); c.fillRect(playX - 1, 0, ppb * .9, h);
-  c.strokeStyle = COL.velvet; c.lineWidth = 2;
-  c.beginPath(); c.moveTo(playX, 4); c.lineTo(playX, h - 4); c.stroke();
+
+  for (let i = gems.length - 1; i >= 0; i--) {
+    const g = gems[i], x = X(g.t);
+    if (x < -30 || x > w + 30) continue;
+    const fade = x < hitX ? clamp(1 - (hitX - x) / 40, 0, 1) : 1;
+    c.globalAlpha = fade;
+    const gl = c.createRadialGradient(x, mainY, 0, x, mainY, g.r * 1.9);
+    gl.addColorStop(0, alpha(g.col, .5)); gl.addColorStop(1, alpha(g.col, 0));
+    c.fillStyle = gl; c.beginPath(); c.arc(x, mainY, g.r * 1.9, 0, Math.PI * 2); c.fill();
+    c.fillStyle = g.col; c.beginPath(); c.arc(x, mainY, g.r, 0, Math.PI * 2); c.fill();
+    if (g.down) { c.strokeStyle = COL.ivory; c.lineWidth = 2; c.stroke(); }
+    if (g.label && g.r > 9) { c.fillStyle = COL.ink; c.font = `italic 800 ${Math.round(clamp(g.r, 10, 16))}px ${FD}`; c.textAlign = 'center'; c.fillText(g.label, x, mainY + g.r * .38); }
+    if (g.word) { c.fillStyle = COL.ivory; c.font = `italic 700 13px ${FD}`; c.textAlign = 'center'; c.fillText(g.word, x, mainY - g.r - 6); }
+    c.globalAlpha = 1;
+  }
 }
 
 /* ---------- HUD ---------- */
@@ -1038,26 +1179,31 @@ function tip(s, cls) {
 }
 function updateHud(force) {
   const t = nowS(); if (!force && t - hudT < .1) return; hudT = t;
-  const p = G.piece, playing = G.state === 'playing' || G.state === 'fermata';
-  const mk = markAt(G.state === 'menu' ? 0 : G.pos), [lo, hi] = mk.tempo;
+  const p = G.piece, live = G.state === 'playing' || G.state === 'fermata';
+  const nextBeat = G.state === 'playing' ? Math.min(G.k + 1, p.length) : 0;
+  const mk = markAt(nextBeat), [lo, hi] = mk.tempo;
   const bar = Math.min(p.length / p.meter, Math.floor(G.pos / p.meter) + 1);
-  $('#barLine').textContent = G.state === 'fermata' || G.state === 'done' ? 'Fermata' : `Bar ${G.state === 'menu' ? 1 : bar} / ${p.length / p.meter} · beat ${G.state === 'playing' ? (G.k % p.meter) + 1 : 1}`;
-  const bpmEl = $('#bpm');
-  if (playing) {
+  $('#barLine').textContent = G.state === 'fermata' || G.state === 'done' ? 'Final chord' : `Bar ${G.state === 'playing' ? bar : 1} / ${p.length / p.meter}`;
+  const sw = $('#speedWord');
+  if (live) {
     const bpm = Math.round(60 * G.T);
-    bpmEl.textContent = bpm; bpmEl.className = bpm < lo ? 'lo' : bpm > hi ? 'hi' : 'ok';
-    $('#dynNow').textContent = dynName(G.dyn);
-  } else { bpmEl.textContent = '—'; bpmEl.className = ''; $('#dynNow').textContent = '—'; }
-  $('#bpmTarget').textContent = `target ♩ ${lo}–${hi}`;
-  const metro = $('#metro');
-  metro.style.setProperty('--beat', (60 / ((lo + hi) / 2)).toFixed(3) + 's');
-  metro.classList.toggle('on', G.state !== 'menu');
-  $('#dynMark').textContent = `marked ${mk.dyn}`;
+    const [word, cls] = bpm < lo * .95 ? ['Too slow', 'lo'] : bpm > hi * 1.05 ? ['Too fast', 'hi'] : ['On tempo', 'ok'];
+    sw.textContent = word; sw.className = 'val word ' + cls;
+    $('#bpmLine').textContent = `♩ ${bpm} · aim ${lo}–${hi}`;
+    $('#sizeWord').textContent = DYN_WORD[dynName(G.dyn)];
+  } else {
+    sw.textContent = '—'; sw.className = 'val word';
+    $('#bpmLine').textContent = `aim ♩ ${lo}–${hi}`;
+    $('#sizeWord').textContent = '—';
+  }
+  $('#sizeAim').textContent = `aim: ${DYN_WORD[mk.dyn]}`;
+  $('#combo').textContent = '×' + G.combo;
+  $('#bestCombo').textContent = 'best ' + G.bestCombo;
   const ens = 1 - G.chaos, m = $('#ensMeter');
   m.style.width = Math.round(ens * 100) + '%';
   m.style.background = ens > .7 ? 'var(--good)' : ens > .45 ? 'var(--warn)' : 'var(--bad)';
   $('#ensText').textContent = ens > .7 ? 'together' : ens > .45 ? 'wobbly' : 'falling apart';
-  $('#scoreNow').textContent = G.stats && G.stats.beats ? finalScores().total : '—';
+  $('#scoreNow').textContent = G.points.toLocaleString();
 }
 
 /* ---------- Main loop ---------- */
@@ -1068,7 +1214,7 @@ function frame() {
   advance(t, dt);
   updateCues(dt, t);
   if (G.state === 'fermata' && t - G.fermataT > 8) cutoff(t);
-  drawStage(t); drawScore(); updateHud(false);
+  drawStage(t); drawLane(t); updateHud(false);
   requestAnimationFrame(frame);
 }
 
@@ -1089,7 +1235,6 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space') {
     e.preventDefault();
     if (e.repeat) return;
-    G.ripples.push({x:cursor.x, y:cursor.y, t0:nowS(), a:G.keyLevel});
     onBeat(nowS(), .03 + G.keyLevel * .3);
   } else if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
     e.preventDefault();
