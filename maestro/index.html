@@ -139,8 +139,8 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
         <details class="how" open>
           <summary>How to conduct</summary>
           <ol>
-            <li>The gold road flows down toward the orchestra. Move left and right to keep your ball on it. Wherever your ball is, the spotlight follows, and that section plays out.</li>
-            <li>Beat dots ride down the road. Bounce your baton down and up as each dot reaches your ball. Bigger dots want bigger bounces; the gauge on the left shows how big.</li>
+            <li>Keep your ball inside the ring. The ring slides left and right with the gold road and bounces up and down with the beat, higher when the music is loud.</li>
+            <li>Each beat dot reaches the ring at the bottom of its bounce. Wherever your ball is, the spotlight follows, and that section plays out.</li>
             <li>The road swerves to whoever needs you: a section's badge means bring them in, a colored stretch is their solo.</li>
             <li>Sections you never visit get bored, then fall asleep and miss notes. Following the road keeps everyone awake.</li>
             <li>The orchestra plays on its own, but its mood follows you. At the end: hold, then one beat on Cut!</li>
@@ -557,7 +557,7 @@ function startGame() {
   $('#menu').hidden = true; $('#results').hidden = true; $('#calib').hidden = true;
   $('#stopBtn').hidden = false;
   $('#workLine').textContent = `${p.title} · ${p.composer}`;
-  say('Steer onto the road and bounce on the dots');
+  say('Keep your ball inside the ring');
   tip('', '');
   try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) {}
   updateHud(true);
@@ -624,7 +624,7 @@ function showResults() {
   const [, g, head, line] = tiers.find(x => total >= x[0]);
   $('#resWork').textContent = `${G.piece.title} · ${Math.round(G.points).toLocaleString()} points · best combo ×${G.bestCombo}`;
   $('#resGrade').textContent = g; $('#resHead').textContent = head; $('#resLine').textContent = line;
-  const rows = [['Timing', parts.timing], ['On the road', parts.track], ['Cues & solos', parts.cues], ['Kept awake', parts.attn], ['Final cutoff', parts.cutoff]];
+  const rows = [['Timing', parts.timing], ['In the ring', parts.track], ['Cues & solos', parts.cues], ['Kept awake', parts.attn], ['Final cutoff', parts.cutoff]];
   const box = $('#resRows'); box.textContent = '';
   for (const [label, v] of rows) {
     const r = document.createElement('div'); r.className = 'brow';
@@ -634,7 +634,7 @@ function showResults() {
   }
   const TIPS = {
     timing:'Bounce down and up just as each beat dot reaches your ball.',
-    track:'Keep your ball on the road as it swerves from section to section.',
+    track:'Keep your ball inside the ring: left-right with the road, up-down with its bounce.',
     cues:'When a section’s badge comes down the road, steer over to them. Stay with them through colored solo stretches.',
     attn:'Sweep across the orchestra now and then. Any section you ignore gets bored, then falls asleep.',
     cutoff:'Hold still through Hold…, then give one beat when Cut! reaches your ball.',
@@ -1074,40 +1074,31 @@ function drawStage(t, M) {
     }
   }
 
-  // the hit line, where the road should meet your ball
-  c.strokeStyle = alpha(COL.ivory, .45); c.lineWidth = 2;
+  // The target ring: where the road meets the hit line, bouncing up and down with the beat
+  // (higher for louder). Your ball moves the same way with your hand. Keep the ball in the ring.
+  c.strokeStyle = alpha(COL.ivory, .3); c.lineWidth = 2;
   c.beginPath(); c.moveTo(0, HIT); c.lineTo(w, HIT); c.stroke();
-  const rx = roadX(musicPos(t)) * w;
-  c.strokeStyle = alpha(COL.ivory, .8); c.lineWidth = 2;
-  c.beginPath(); c.arc(rx, HIT, lw * 2.4, 0, Math.PI * 2); c.stroke();
-  const d = Math.abs(cursor.x * w - rx) / w;
+  const lift = y => clamp((BOT - y) * h * .42, -lw * 2, HIT - top - 30);
+  const rx = roadX(musicPos(t)) * w, ry = HIT - lift(yAt(t, M));
+  const br = clamp(h * .024, 10, 16), ringR = br * 1.9;
+  const ay = HIT - lift(cursor.y);
+  const d = Math.hypot((ax - rx) / w, (ay - ry) / h * 1.4);
   const ballCol = !live ? COL.ivory : d < .06 ? COL.brass : d < .13 ? COL.ivory : COL.bad;
-  const br = clamp(h * .024, 10, 16);
-  const by = HIT + clamp((cursor.y - .55) * h * .14, -br * 2.2, br * 1.2); // the ball dips with your beat
-  const gl = c.createRadialGradient(ax, by, 0, ax, by, br * 2.6);
+  c.strokeStyle = alpha(COL.ivory, .18); c.lineWidth = 2; c.setLineDash([3, 4]);
+  c.beginPath(); c.moveTo(rx, HIT); c.lineTo(rx, ry); c.stroke(); c.setLineDash([]);
+  c.fillStyle = alpha(COL.gold, .16); c.strokeStyle = COL.ivory; c.lineWidth = 3;
+  c.beginPath(); c.arc(rx, ry, ringR, 0, Math.PI * 2); c.fill(); c.stroke();
+  const gl = c.createRadialGradient(ax, ay, 0, ax, ay, br * 2.6);
   gl.addColorStop(0, alpha(ballCol, .55)); gl.addColorStop(1, alpha(ballCol, 0));
-  c.fillStyle = gl; c.beginPath(); c.arc(ax, by, br * 2.6, 0, Math.PI * 2); c.fill();
-  c.fillStyle = ballCol; c.beginPath(); c.arc(ax, by, br, 0, Math.PI * 2); c.fill();
+  c.fillStyle = gl; c.beginPath(); c.arc(ax, ay, br * 2.6, 0, Math.PI * 2); c.fill();
+  c.fillStyle = ballCol; c.beginPath(); c.arc(ax, ay, br, 0, Math.PI * 2); c.fill();
   c.strokeStyle = spotCol; c.lineWidth = 3; c.stroke();
 
   G.ripples = G.ripples.filter(r => t - r.t0 < .7);
   for (const r of G.ripples) {
     const k = (t - r.t0) / .7;
     c.strokeStyle = alpha(r.col || COL.brass, (1 - k) * .8); c.lineWidth = 3;
-    c.beginPath(); c.arc(ax, HIT, br + k * (24 + 40 * r.a), 0, Math.PI * 2); c.stroke();
-  }
-
-  // bounce gauge on the left: the ghost shows how big to bounce, the ball shows you
-  if (live && (G.state === 'ready' || G.state === 'playing' || G.state === 'fermata')) {
-    const gx = clamp(w * .03, 14, 26), g0 = HIT - (HIT - top) * .55, g1 = HIT;
-    const map = y => lerp(g0, g1, clamp((y - .22) / (BOT - .22), 0, 1.15));
-    c.strokeStyle = alpha(COL.ivory, .2); c.lineWidth = 6;
-    c.beginPath(); c.moveTo(gx, g0); c.lineTo(gx, g1); c.stroke();
-    c.fillStyle = alpha(COL.ivory, .45); c.beginPath(); c.arc(gx, map(yAt(t, M)), 7, 0, Math.PI * 2); c.fill();
-    c.fillStyle = ballCol; c.beginPath(); c.arc(gx, map(cursor.y), 4.5, 0, Math.PI * 2); c.fill();
-    c.save(); c.translate(gx + 14, (g0 + g1) / 2); c.rotate(-Math.PI / 2);
-    c.font = `700 9.5px ${FB}`; c.fillStyle = alpha(COL.ivory, .45); c.textAlign = 'center'; c.fillText('BOUNCE', 0, 0);
-    c.restore();
+    c.beginPath(); c.arc(ax, ay, br + k * (24 + 40 * r.a), 0, Math.PI * 2); c.stroke();
   }
 
   // judgement popup
@@ -1272,8 +1263,8 @@ function frame() {
   const M = pathModel(t);
   if (G.state === 'ready' || G.state === 'playing') {
     const moving = cursor.trail.length > 1 && t - cursor.trail[cursor.trail.length - 1].t < .6;
-    // staying on the road means aiming where it leads
-    const acc = moving ? clamp(1 - Math.abs(cursor.x - roadX(musicPos(t))) / .13, 0, 1) : 0;
+    // staying in the ring: aiming where the road leads and bouncing with the beat
+    const acc = moving ? clamp(1 - Math.hypot((cursor.x - roadX(musicPos(t))) / .13, (cursor.y - yAt(t, M)) / .22), 0, 1) : 0;
     G.trk += acc * dt; G.trkT += dt;
     if (G.state === 'playing') {
       G.trkAll += acc * dt; G.trkAllT += dt;
