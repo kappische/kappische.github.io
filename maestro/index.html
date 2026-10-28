@@ -121,7 +121,7 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
       <div class="panel">
         <p class="eyebrow">A conducting game</p>
         <h1>Maestro <em>Mayhem</em></h1>
-        <p class="lede">The orchestra plays at your tempo and your volume. Beat steadily, size your gestures to the markings, and bring each section in when it's due.</p>
+        <p class="lede">Wave your baton along the line and the orchestra comes alive. The better you follow, the better they play.</p>
 
         <h2>Choose a piece</h2>
         <div class="pieces" id="pieces"></div>
@@ -140,10 +140,10 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
           <summary>How to conduct</summary>
           <ol>
             <li>Your baton is the ball on the left. Keep it on the gold line as it scrolls in, like Trombone Champ.</li>
-            <li>The line bounces once per beat. The bottom of each bounce is the beat. Start on the Ready bounces, and the orchestra joins on Go!</li>
-            <li>Tall bounces play loud, small bounces play soft. The orchestra follows your speed and size.</li>
-            <li>When the line shoots up into the cue zone with a section's name, reach up with it to bring them in.</li>
-            <li>At the end the line goes flat. Hold still, then dip once on Cut!</li>
+            <li>The line bounces once per beat, and the bottom of each bounce is the beat. After two Ready bounces the orchestra starts on Go!</li>
+            <li>The orchestra plays on its own, but its mood follows you. Conduct well and it plays together, in tune and full. Slack off and it gets sloppy.</li>
+            <li>Tall bounces are loud, small ones soft. Beat a little ahead or behind to push the tempo.</li>
+            <li>When the line shoots up into the cue zone with a section's name, reach up with it to bring them in. At the end the line goes flat: hold, then dip once on Cut!</li>
           </ol>
         </details>
         <p class="fine">Public-domain scores, played by an orchestra synthesized live in your browser. No recordings, nothing to license. Keyboard works too: <kbd>Space</kbd> beats, <kbd>↑</kbd> <kbd>↓</kbd> louder and softer, <kbd>1</kbd>–<kbd>4</kbd> cue a section.</p>
@@ -175,7 +175,7 @@ kbd{font-family:var(--body);font-size:11.5px;border:1px solid var(--rule);border
     <div class="stat"><span class="lbl">Speed</span><span class="val word" id="speedWord">—</span><span class="sub" id="bpmLine">aim ♩ 108–132</span></div>
     <div class="stat"><span class="lbl">Beat size</span><span class="val word" id="sizeWord">—</span><span class="sub" id="sizeAim">aim: Soft</span></div>
     <div class="stat"><span class="lbl">Combo</span><span class="val" id="combo">×0</span><span class="sub" id="bestCombo">best 0</span></div>
-    <div class="stat"><span class="lbl">Ensemble</span><div class="meter"><i id="ensMeter"></i></div><span class="sub" id="ensText">together</span></div>
+    <div class="stat"><span class="lbl">Orchestra mood</span><div class="meter"><i id="ensMeter"></i></div><span class="sub" id="ensText">happy</span></div>
     <div class="stat"><span class="lbl">Score</span><span class="val" id="scoreNow">0</span></div>
     <span class="spacer"></span>
     <button class="btn" id="stopBtn" hidden>Stop</button>
@@ -421,39 +421,24 @@ function playNote(sec, m, t, dur, vel, det, hold) {
 /* ---------- Game state ---------- */
 const G = {
   state:'menu', piece:PIECES[0], mode:'mouse',
-  k:0, tGest:0, T:2, rate:2, pos:0, prepT:0, evIdx:0,
+  T:2, rate:2, pos:0, startT:0, evIdx:0, missCheck:0,
   active:{}, cue:{}, hit:{}, jitter:{},
-  dyn:.35, chaos:0, ibis:[], lastIbi:0, waitingSince:0,
+  dyn:.35, chaos:0, mood:.6, tempoMul:1, playerDyn:.35, lastBeatT:0, judged:new Set(),
   stats:null, fermataVoices:[], fermataT:0, cutoffScore:0,
-  ripples:[], keyLevel:.5, lastTip:0, lastEarly:0,
-  readyT0:0, combo:0, bestCombo:0, points:0, popups:[],
+  ripples:[], keyLevel:.5, lastTip:0,
+  combo:0, bestCombo:0, points:0, popups:[],
 };
 const cursor = {x:.5, y:.62, trail:[]};
 const CUE_Y = .3;
 
 function markAt(p) {
+  p = Math.max(0, p);
   const m = {dyn:'p', tempo:[60,120], text:''};
   for (const k of G.piece.marks) if (k.b <= p + .01) { if (k.dyn) m.dyn = k.dyn; if (k.tempo) m.tempo = k.tempo; if (k.text) m.text = k.text; }
   return m;
 }
 // seconds per beat the lane asks for at beat j (middle of the marked tempo range)
 const idealAt = j => { const [lo, hi] = markAt(j).tempo; return 120 / (lo + hi); };
-// When the lane expects each upcoming beat, measured from the player's last real beat.
-// If the player is late, the next orb waits just past the ring instead of sliding away.
-function laneClock(t) {
-  const playing = G.state === 'playing';
-  const k = playing ? G.k : -1, base = playing ? G.tGest : G.prepT;
-  const iv1 = idealAt(k + 1);
-  let tn = base + iv1;
-  if (t > tn + .3 * iv1) tn = t - .3 * iv1;
-  const time = j => {
-    if (j <= k) return base - (k - j) * idealAt(Math.max(0, j));
-    let tt = tn;
-    for (let i = k + 2; i <= j; i++) tt += idealAt(i);
-    return tt;
-  };
-  return {k, base, time};
-}
 
 /* ---------- Beat detection: one down-up bounce = one beat ---------- */
 const beatDet = {
@@ -486,68 +471,55 @@ function feed(x, y, t) {
   beatDet.push(cursor.x, cursor.y, t);
 }
 
-/* ---------- Conducting engine ---------- */
+/* ---------- Conducting engine ----------
+   The orchestra plays on its own at the written tempo. Conducting well raises the
+   orchestra's mood (in time, in tune, full sound); conducting badly or not at all
+   lowers it (out of tune, ragged, quieter). Beats nudge the tempo a little. */
+// Music position (in beats) at time t; negative during the count-in
+function posAt(t) {
+  if (G.state === 'ready') return (t - G.startT) / idealAt(0);
+  return G.pos - (nowS() - t) * G.rate;
+}
 function onBeat(t, amp) {
   const level = clamp((amp - .03) / .3, .06, 1);
-  if (G.state === 'ready') { G.prepT = t; G.state = 'prepped'; G.dyn = level; applyDyn(); say(''); ripple(level, COL.mist); popup('Ready…', 'the orchestra joins on Go!', .6); G.trk = 0; G.trkT = 0; return; }
-  if (G.state === 'prepped') {
-    const ibi = t - G.prepT;
-    if (ibi < .25 || ibi > 2.6) { G.prepT = t; ripple(level, COL.mist); return; }
-    judge(t, G.prepT + idealAt(0), idealAt(0), level, DYN[markAt(0).dyn], false);
-    G.T = clamp(1 / ibi, .5, 3.5); G.rate = G.T;
-    G.state = 'playing'; G.k = 0; G.tGest = t; G.pos = 0; G.lastIbi = ibi; G.ibis = [ibi];
-    G.dyn = lerp(G.dyn, level, .6); applyDyn(); say('');
-    return;
+  if (G.state === 'fermata') { if (t - G.fermataT > .8) cutoff(t); return; }
+  if (G.state !== 'ready' && G.state !== 'playing') return;
+  const p = posAt(t), j = Math.round(p), e = p - j;
+  if (j < -3 || j > G.piece.length || Math.abs(e) > .5 || G.judged.has(j)) return;
+  G.judged.add(j);
+  const isCue = G.piece.cues.some(c => c.b === j);
+  judge(e, level, DYN[markAt(j).dyn], isCue, j >= 0);
+  if (j >= 0) {
+    // beating ahead of the orchestra pulls it a little faster, behind pulls it slower
+    G.tempoMul = clamp(G.tempoMul - e * .12, .88, 1.12);
+    if (!isCue) G.playerDyn = lerp(G.playerDyn, level, .5);
+    G.lastBeatT = t;
   }
-  if (G.state === 'fermata') { cutoff(t); return; }
-  if (G.state !== 'playing') return;
-
-  const ibi = t - G.tGest;
-  if (ibi < .2) return;
-  const j = G.k + 1, isCue = G.piece.cues.some(c => c.b === j);
-  judge(t, G.tGest + idealAt(j), idealAt(j), level, DYN[markAt(j).dyn], isCue);
-  const longPause = ibi > 1.8 / G.T;
-  G.T = clamp(lerp(G.T, 1 / ibi, longPause ? .2 : .55), .4, 4);
-  G.k = Math.min(G.k + 1, Math.floor(G.pos) + 2);
-  G.tGest = t;
-  if (!isCue) { G.dyn = lerp(G.dyn, level, .55); applyDyn(); }
-
-  // ensemble: irregular or extreme beating makes the players drift apart
-  if (!longPause) { G.ibis.push(ibi); if (G.ibis.length > 5) G.ibis.shift(); }
-  const mean = G.ibis.reduce((a, b) => a + b, 0) / G.ibis.length;
-  const sd = Math.sqrt(G.ibis.reduce((a, b) => a + (b - mean) ** 2, 0) / G.ibis.length);
-  const mk = markAt(G.pos), mid = (mk.tempo[0] + mk.tempo[1]) / 2;
-  const ratio = 60 * G.T / mid;
-  const extreme = Math.max(0, Math.abs(Math.log(ratio)) - .3) * 2;
-  G.chaos = lerp(G.chaos, clamp((sd / mean) * 3 + extreme, 0, 1), .5);
-  for (const s of SECTIONS) G.jitter[s.id] = (Math.random() - .5) * 2 * G.chaos * .07;
-
-  G.lastIbi = ibi;
-  coach(60 * G.T, mk.tempo[0], mk.tempo[1]);
-
-  if (G.k >= G.piece.length) startFermata(t);
 }
 function ripple(a, col) { G.ripples.push({y:cursor.y, t0:nowS(), a, col}); }
 function popup(word, sub, q) { G.popups = [{word, sub, q, t0:nowS()}]; }
 // Trombone Champ style judgement: hit the bottom of the bounce on time, and stay on the line on the way
-function judge(t, expected, ideal, level, target, isCue) {
-  const e = (t - expected) / ideal, a = Math.abs(e);
-  const q = a < .12 ? 1 : a < .25 ? .6 : a < .4 ? .3 : 0;
+function judge(e, level, target, isCue, counts) {
+  const a = Math.abs(e);
+  const q = a < .15 ? 1 : a < .3 ? .7 : .4;
   const trk = G.trkT > .05 ? G.trk / G.trkT : q;
   G.trk = 0; G.trkT = 0;
   const s = .55 * q + .45 * trk;
-  const word = s >= .85 ? 'Perfecto!' : s >= .65 ? 'Nice!' : s >= .45 ? 'OK' : s >= .25 ? 'Meh' : 'Nasty';
-  G.combo = s >= .45 ? G.combo + 1 : 0;
-  G.bestCombo = Math.max(G.bestCombo, G.combo);
-  const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
-  G.points += Math.round(s * 150 * mult);
-  G.stats.n++; G.stats.timing += q; G.stats.track += trk;
+  const word = s >= .8 ? 'Perfecto!' : s >= .6 ? 'Nice!' : s >= .4 ? 'OK' : 'Meh';
+  const grade = s >= .8 ? 1 : s >= .4 ? .6 : .2;
   let sub = '';
-  if (q < .6) sub = e < 0 ? 'too early' : 'too late';
-  else if (!isCue && level < target - .22) sub = 'bigger!';
-  else if (!isCue && level > target + .22) sub = 'smaller!';
-  else if (mult > 1) sub = `${mult}× combo`;
-  const grade = s >= .85 ? 1 : s >= .45 ? .6 : .2;
+  if (q < .7) sub = e < 0 ? 'a bit early' : 'a bit late';
+  else if (!isCue && level < target - .25) sub = 'bigger!';
+  else if (!isCue && level > target + .25) sub = 'smaller!';
+  if (counts) {
+    G.combo = s >= .4 ? G.combo + 1 : 0;
+    G.bestCombo = Math.max(G.bestCombo, G.combo);
+    const mult = 1 + Math.min(3, Math.floor(G.combo / 8));
+    G.points += Math.round(s * 150 * mult);
+    G.stats.timing += q;
+    G.mood = clamp(G.mood + (s - .45) * .14, 0, 1);
+    if (!sub && mult > 1) sub = `${mult}× combo`;
+  }
   popup(word, sub, grade);
   ripple(level, grade >= 1 ? COL.brass : grade >= .6 ? COL.winds : COL.bad);
 }
@@ -556,12 +528,13 @@ function applyDyn() {
   if (!AC) return;
   OUT.dynG.gain.setTargetAtTime(.07 + .93 * Math.pow(G.dyn, 1.35), AC.currentTime, .12);
 }
-function coach(bpm, lo, hi) {
-  const t = nowS(); if (t - G.lastTip < 3.5) return;
+function coach(t) {
+  if (t - G.lastTip < 4) return;
   let msg = null, cls = 'warn';
-  if (bpm > hi * 1.4) msg = 'Way too fast! The violinists’ bows are smoking.';
-  else if (bpm < lo * .65) msg = 'So slow… the brass are nodding off.';
-  else if (G.chaos > .5) { msg = 'Wobbly! Follow the line to pull the orchestra together.'; cls = 'bad'; }
+  if (G.state !== 'playing') return;
+  if (t - G.lastBeatT > 4 * idealAt(G.pos) && G.pos > 4) msg = 'Conduct! The orchestra is losing interest.';
+  else if (G.mood > .85 && G.combo >= 16) { msg = 'The orchestra is on fire!'; cls = 'good'; }
+  else if (G.mood < .3) { msg = 'Wobbly! Follow the line to pull them together.'; cls = 'bad'; }
   if (msg) { tip(msg, cls); G.lastTip = t; }
 }
 
@@ -569,11 +542,11 @@ function startGame() {
   initAudio();
   OUT.dynG.gain.cancelScheduledValues(AC.currentTime);
   OUT.dynG.gain.setValueAtTime(.3, AC.currentTime);
-  const p = G.piece;
-  Object.assign(G, {state:'ready', k:0, pos:0, evIdx:0, chaos:0, ibis:[], dyn:.35, fermataVoices:[], cutoffScore:0, ripples:[], lastTip:0,
-    readyT0:nowS() + 1.2, combo:0, bestCombo:0, points:0, popups:[]});
-  G.stats = {n:0, timing:0, track:0};
-  G.trk = 0; G.trkT = 0; G.cueDwell = 0;
+  const p = G.piece, now = nowS();
+  Object.assign(G, {state:'ready', pos:0, rate:1 / idealAt(0), T:1 / idealAt(0), evIdx:0, chaos:.2, dyn:DYN[markAt(0).dyn], fermataVoices:[], cutoffScore:0, ripples:[], lastTip:0,
+    startT:now + 1.2 + 3 * idealAt(0), combo:0, bestCombo:0, points:0, popups:[], mood:.6, tempoMul:1, playerDyn:DYN[markAt(0).dyn], lastBeatT:now, judged:new Set(), missCheck:0});
+  G.stats = {timing:0};
+  G.trk = 0; G.trkT = 0; G.trkAll = 0; G.trkAllT = 0; G.cueDwell = 0;
   G.active = {}; G.cue = {}; G.hit = {};
   for (const s of SECTIONS) { G.active[s.id] = true; G.jitter[s.id] = 0; }
   for (const c of p.cues) { G.active[c.sec] = false; G.cue[c.sec] = {b:c.b, status:'pending'}; }
@@ -594,19 +567,23 @@ function startFermata(t) {
     for (const n of notes) G.fermataVoices.push(playNote(sec, midi(n), at, 40, .9, 0, true));
     G.hit[sec] = nowS();
   }
-  popup('Hold it…', 'then beat on Cut!', 1);
+  popup('Hold it…', 'then dip once on Cut!', 1);
 }
-function cutoff(t) {
-  const off = Math.abs(t - G.fermataT - 2.5);
-  G.cutoffScore = off < .45 ? 1 : off < 1.1 ? .6 : .25;
-  G.points += Math.round(G.cutoffScore * 400);
-  popup(G.cutoffScore === 1 ? 'Perfect cutoff!' : G.cutoffScore > .5 ? 'Nice cutoff' : 'Cut!', '', G.cutoffScore);
-  ripple(1, COL.brass);
+function cutoff(t, auto) {
+  if (auto) { G.cutoffScore = 0; popup('Fine.', 'the orchestra stopped on its own', .2); }
+  else {
+    const off = Math.abs(t - G.fermataT - 2.5);
+    G.cutoffScore = off < .5 ? 1 : off < 1.2 ? .7 : .4;
+    G.points += Math.round(G.cutoffScore * 400);
+    popup(G.cutoffScore === 1 ? 'Perfect cutoff!' : G.cutoffScore > .5 ? 'Nice cutoff' : 'Cut!', '', G.cutoffScore);
+    ripple(1, COL.brass);
+  }
   const at = AC.currentTime;
   G.fermataVoices.forEach(v => v.release(at)); G.fermataVoices = [];
   G.state = 'done'; say('');
   setTimeout(showResults, 1400);
 }
+
 function stopGame() {
   if (AC) {
     G.fermataVoices.forEach(v => v.release(AC.currentTime)); G.fermataVoices = [];
@@ -624,11 +601,12 @@ function cueScore() {
   return cs.reduce((a, c) => a + v[c.status], 0) / cs.length;
 }
 function finalScores() {
-  const st = G.stats, n = Math.max(1, st.n);
-  const parts = {timing:st.timing / n, track:st.track / n, cues:cueScore(), cutoff:G.cutoffScore};
+  const n = G.piece.length + 1;
+  const parts = {timing:G.stats.timing / n, track:G.trkAllT ? G.trkAll / G.trkAllT : 0, cues:cueScore(), cutoff:G.cutoffScore};
   const total = parts.timing * .4 + parts.track * .35 + parts.cues * .17 + parts.cutoff * .08;
   return {parts, total:Math.round(total * 100)};
 }
+
 function showResults() {
   if (G.state !== 'done') return;
   const {parts, total} = finalScores();
@@ -664,23 +642,27 @@ function showResults() {
 /* ---------- Cues: follow the line up into the cue zone ---------- */
 function updateCues(dt, t) {
   if (G.state !== 'playing') return;
-  for (const [sec, c] of Object.entries(G.cue)) if (c.status === 'pending' && G.pos > c.b + 1.5) {
-    c.status = 'missed'; tip(`Missed the ${secName(sec)}! Reach up into the cue zone to wake them.`, 'bad'); G.lastTip = t;
+  for (const [sec, c] of Object.entries(G.cue)) {
+    if (c.status === 'pending' && G.pos > c.b + 1.5) {
+      c.status = 'missed'; tip(`Missed the ${secName(sec)} cue! They’ll wander in late.`, 'bad'); G.lastTip = t;
+    }
+    // nobody cued them, so they come in on their own two bars later
+    if (c.status === 'missed' && !G.active[sec] && G.pos > c.b + 2 * G.piece.meter) { G.active[sec] = true; G.hit[sec] = t; }
   }
   if (cursor.y >= CUE_Y) { G.cueDwell = 0; return; }
   G.cueDwell += dt;
   if (G.cueDwell < .06) return;
   const list = Object.entries(G.cue).filter(([sec]) => !G.active[sec]);
-  const pick = list.find(([, c]) => c.status === 'pending' && G.pos >= c.b - 2.2) || list.find(([, c]) => c.status === 'missed');
+  const pick = list.find(([, c]) => c.status === 'pending' && G.pos >= c.b - 2.4) || list.find(([, c]) => c.status === 'missed');
   if (pick) tryCue(pick[0], t);
 }
 function tryCue(sec, t) {
   const c = G.cue[sec];
   if (!c || G.active[sec] || G.state !== 'playing') return;
-  if (c.status === 'pending' && G.pos < c.b - 2.2) return;
+  if (c.status === 'pending' && G.pos < c.b - 2.4) return;
   G.active[sec] = true; G.hit[sec] = t;
-  if (c.status === 'missed') { c.status = 'missed-late'; tip(`The ${secName(sec)} wake up, very late.`, 'warn'); }
-  else if (G.pos <= c.b + .3) { c.status = 'hit'; G.points += 500; popup(`${secName(sec, true)} in!`, 'perfect cue +500', 1); }
+  if (c.status === 'missed') { c.status = 'missed-late'; tip(`The ${secName(sec)} wake up, late.`, 'warn'); }
+  else if (G.pos <= c.b + .5) { c.status = 'hit'; G.points += 500; G.mood = clamp(G.mood + .1, 0, 1); popup(`${secName(sec, true)} in!`, 'perfect cue +500', 1); }
   else { c.status = 'late'; G.points += 200; popup(`${secName(sec, true)} in`, 'a bit late +200', .6); }
   G.lastTip = t;
   G.ripples.push({y:cursor.y, t0:t, a:1, col:COL[sec]});
@@ -688,25 +670,40 @@ function tryCue(sec, t) {
 
 const secName = (id, cap) => { const n = {strings:'strings', winds:'woodwinds', brass:'brass', timp:'timpani'}[id]; return cap ? n[0].toUpperCase() + n.slice(1) : n; };
 
-/* ---------- Scheduling ---------- */
+/* ---------- Scheduling: the music moves on by itself ---------- */
 function advance(t, dt) {
-  if (G.state !== 'playing') return;
-  const expected = G.k + (t - G.tGest) * G.T;
-  const cap = G.k + .97;
-  G.rate = G.T * clamp(1 + (expected - G.pos) * 2.2, .25, 3);
-  G.pos = Math.min(G.pos + G.rate * dt, cap);
-  if (expected > cap + .35) { if (!G.waitingSince) G.waitingSince = t; }
-  else G.waitingSince = 0;
-  if (G.waitingSince && t - G.waitingSince > .5) say('The orchestra is waiting for your beat');
-  else if ($('#call').textContent.startsWith('The orchestra is waiting')) say('');
+  if (G.state === 'ready' && t >= G.startT) { G.state = 'playing'; G.pos = (t - G.startT) / idealAt(0); say(''); }
+  if (G.state !== 'playing' && G.state !== 'ready') return;
 
-  const ev = G.piece.events, ahead = Math.min(G.pos + G.rate * .12, cap);
+  // missed beats lower the mood; following the line raises it
+  const pNow = G.state === 'ready' ? posAt(t) : G.pos;
+  for (let j = Math.max(0, G.missCheck || 0); j <= Math.floor(pNow - .5) && j <= G.piece.length; j++) {
+    if (!G.judged.has(j)) { G.combo = 0; G.mood = clamp(G.mood - .02, 0, 1); }
+    G.missCheck = j + 1;
+  }
+  G.tempoMul = lerp(G.tempoMul, 1, Math.min(1, dt * .35));
+  const recent = t - G.lastBeatT < 3 * idealAt(Math.max(0, pNow));
+  const written = DYN[markAt(pNow).dyn];
+  G.dyn = clamp((recent ? lerp(written, G.playerDyn, .45) : written) * (.6 + .4 * G.mood), .05, 1);
+  applyDyn();
+  G.chaos = lerp(G.chaos, (1 - G.mood) * .85, Math.min(1, dt * 2));
+  if (Math.random() < dt * 2) for (const s of SECTIONS) G.jitter[s.id] = (Math.random() - .5) * 2 * G.chaos * .07;
+  coach(t);
+  if (G.state !== 'playing') return;
+
+  G.rate = G.tempoMul / idealAt(G.pos); G.T = G.rate;
+  G.pos += G.rate * dt;
+  if (G.pos >= G.piece.length) { startFermata(t); return; }
+
+  const ev = G.piece.events, ahead = G.pos + G.rate * .12;
   while (G.evIdx < ev.length && ev[G.evIdx].b < ahead) {
     const e = ev[G.evIdx++];
     if (!G.active[e.sec] || e.b < G.pos - .6) continue;
     const when = Math.max(0, (e.b - G.pos) / G.rate + (G.jitter[e.sec] || 0));
     const det = (Math.random() - .5) * 2 * G.chaos * 38;
-    playNote(e.sec, e.m, AC.currentTime + when, Math.max(.08, e.d / G.T * .97), e.vel * (.55 + .45 * G.dyn), det, false);
+    // a grumpy orchestra plays some notes half-heartedly
+    const vel = e.vel * (G.chaos > .45 && Math.random() < G.chaos * .4 ? .35 : 1);
+    playNote(e.sec, e.m, AC.currentTime + when, Math.max(.08, e.d / G.rate * .97), vel * (.55 + .45 * G.dyn), det, false);
     G.hit[e.sec] = t + when;
   }
 }
@@ -857,23 +854,22 @@ function topFor(j) {
 function pathModel(t) {
   const p = G.piece, st = G.state, beats = [];
   let hold = null;
-  if (st === 'menu' || st === 'ready') {
-    const iv = idealAt(0), t0 = st === 'menu' ? t + .9 : G.readyT0;
-    const n0 = Math.floor((t - 2 - t0) / iv);
-    for (let n = n0; n < n0 + 14; n++) beats.push({t:t0 + n * iv, j:0, ready:n >= 0});
-  } else if (st === 'prepped' || st === 'playing') {
-    const clk = laneClock(t);
-    for (let j = clk.k - 4; j <= p.length; j++) { const tt = clk.time(j); beats.push({t:tt, j}); if (tt > t + 4) break; }
+  if (st === 'menu') {
+    const iv = idealAt(0), t0 = t + .9;
+    for (let n = -3; n < 12; n++) beats.push({t:t0 + n * iv, j:-1});
+  } else if (st === 'ready' || st === 'playing') {
+    const pos = st === 'ready' ? posAt(t) : G.pos, rate = st === 'ready' ? 1 / idealAt(0) : G.rate;
+    for (let j = Math.floor(pos) - 4; j <= p.length; j++) { const tt = t + (j - pos) / rate; beats.push({t:tt, j}); if (tt > t + 4) break; }
     const last = beats[beats.length - 1];
     if (last.j === p.length) hold = {from:last.t, to:last.t + 2.5};
   } else {
     const iv = idealAt(p.length);
     for (let j = 4; j >= 0; j--) beats.push({t:G.fermataT - j * iv, j:p.length - j});
     hold = {from:G.fermataT, to:G.fermataT + 2.5};
-    if (st === 'fermata' && t > hold.to + .3) hold.to = t - .3;
   }
   return {beats, hold};
 }
+
 function yAt(tt, M) {
   const {beats, hold} = M;
   if (hold && tt >= hold.from) {
@@ -934,7 +930,7 @@ function drawStage(t, M) {
   const bs = M.beats;
   for (let i = 0; i < bs.length - 1; i++) {
     const top = topFor(bs[i + 1].j);
-    if (!top.sec || bs[i + 1].ready) continue;
+    if (!top.sec) continue;
     const a = Math.max(bs[i].t, t), b = bs[i + 1].t;
     if (b < t) continue;
     c.strokeStyle = COL[top.sec]; c.lineWidth = lw;
@@ -949,20 +945,19 @@ function drawStage(t, M) {
     }
   }
   // beat dots at the bottom of every bounce, plus words where the music changes
-  let shownReady = false, prevDyn = null;
-  for (const b of bs) {
+    for (const b of bs) {
     const x = X(b.t);
     if (x < hitX - 40 || x > w + 20) continue;
     const future = b.t >= t - .05;
     c.fillStyle = future ? COL.ivory : alpha(COL.ivory, .35);
     c.beginPath(); c.arc(x, Y(BOT), lw * 1.15, 0, Math.PI * 2); c.fill();
     let word = '';
-    if (b.ready && !shownReady && future) { word = 'Ready'; shownReady = true; }
-    if (!b.ready && b.j === 0 && G.state === 'prepped') word = 'Go!';
-    if (!b.ready && b.j === G.piece.length && G.state !== 'fermata') word = 'Last';
+    if (G.state === 'ready' && (b.j === -1 || b.j === -2)) word = 'Ready';
+    if (G.state === 'ready' && b.j === 0) word = 'Go!';
+    if (G.state === 'playing' && b.j === G.piece.length) word = 'Last';
     if (word) { c.font = `italic 700 15px ${FD}`; c.fillStyle = COL.ivory; c.textAlign = 'center'; c.fillText(word, x, Y(BOT) + 24); }
   }
-  if (G.state === 'prepped' || G.state === 'playing') {
+  if (G.state === 'ready' || G.state === 'playing') {
     let prev = G.piece.marks[0].dyn;
     for (const m of G.piece.marks.slice(1)) {
       const words = [];
@@ -1088,7 +1083,7 @@ function drawSection(c, i, s, t, w, h) {
     }
   });
   c.globalAlpha = 1;
-  if (inGame && !awake && (G.state === 'playing' || G.state === 'prepped' || G.state === 'ready')) {
+  if (inGame && !awake && (G.state === 'playing' || G.state === 'ready')) {
     c.fillStyle = alpha(COL.mist, .8); c.textAlign = 'left';
     for (let z = 0; z < 3; z++) {
       const ph = (t * .6 + z / 3) % 1;
@@ -1117,7 +1112,7 @@ function tip(s, cls) {
 function updateHud(force) {
   const t = nowS(); if (!force && t - hudT < .1) return; hudT = t;
   const p = G.piece, live = G.state === 'playing' || G.state === 'fermata';
-  const nextBeat = G.state === 'playing' ? Math.min(G.k + 1, p.length) : G.state === 'fermata' || G.state === 'done' ? p.length : 0;
+  const nextBeat = G.state === 'playing' ? Math.min(Math.ceil(G.pos), p.length) : G.state === 'fermata' || G.state === 'done' ? p.length : 0;
   const mk = markAt(nextBeat), [lo, hi] = mk.tempo;
   const bar = Math.min(p.length / p.meter, Math.floor(G.pos / p.meter) + 1);
   $('#barLine').textContent = G.state === 'fermata' || G.state === 'done' ? 'Final chord' : `Bar ${G.state === 'playing' ? bar : 1} / ${p.length / p.meter}`;
@@ -1136,10 +1131,10 @@ function updateHud(force) {
   $('#sizeAim').textContent = `aim: ${DYN_WORD[mk.dyn]}`;
   $('#combo').textContent = '×' + G.combo;
   $('#bestCombo').textContent = 'best ' + G.bestCombo;
-  const ens = 1 - G.chaos, m = $('#ensMeter');
-  m.style.width = Math.round(ens * 100) + '%';
-  m.style.background = ens > .7 ? 'var(--good)' : ens > .45 ? 'var(--warn)' : 'var(--bad)';
-  $('#ensText').textContent = ens > .7 ? 'together' : ens > .45 ? 'wobbly' : 'falling apart';
+  const mood = G.state === 'menu' || G.mood === undefined ? .6 : G.mood, m = $('#ensMeter');
+  m.style.width = Math.round(mood * 100) + '%';
+  m.style.background = mood > .55 ? 'var(--good)' : mood > .3 ? 'var(--warn)' : 'var(--bad)';
+  $('#ensText').textContent = mood > .8 ? 'on fire' : mood > .55 ? 'happy' : mood > .3 ? 'wobbly' : 'grumpy';
   $('#scoreNow').textContent = Math.round(G.points).toLocaleString();
 }
 
@@ -1150,12 +1145,17 @@ function frame() {
   if (G.mode !== 'mouse' || !$('#calib').hidden) camFrame(t);
   advance(t, dt);
   updateCues(dt, t);
-  if (G.state === 'fermata' && t - G.fermataT > 8) cutoff(t);
+  if (G.state === 'fermata' && t - G.fermataT > 4.6) cutoff(t, true);
   const M = pathModel(t);
-  if (G.state === 'prepped' || G.state === 'playing') {
-    const acc = clamp(1 - Math.abs(cursor.y - yAt(t, M)) / .14, 0, 1);
+  if (G.state === 'ready' || G.state === 'playing') {
+    const moving = cursor.trail.length > 1 && t - cursor.trail[cursor.trail.length - 1].t < .6;
+    const acc = moving ? clamp(1 - Math.abs(cursor.y - yAt(t, M)) / .18, 0, 1) : 0;
     G.trk += acc * dt; G.trkT += dt;
-    G.points += acc * dt * 30 * (1 + Math.min(3, Math.floor(G.combo / 8)));
+    if (G.state === 'playing') {
+      G.trkAll += acc * dt; G.trkAllT += dt;
+      if (moving) G.mood = clamp(G.mood + (acc - .5) * dt * .12, 0, 1);
+      G.points += acc * dt * 30 * (1 + Math.min(3, Math.floor(G.combo / 8)));
+    }
   }
   drawStage(t, M); updateHud(false);
   requestAnimationFrame(frame);
@@ -1173,7 +1173,7 @@ stageC.addEventListener('pointermove', pointer);
 stageC.addEventListener('pointerdown', e => { pointer(e); try { stageC.setPointerCapture(e.pointerId); } catch (_) {} });
 
 window.addEventListener('keydown', e => {
-  const live = ['ready', 'prepped', 'playing', 'fermata'].includes(G.state);
+  const live = ['ready', 'playing', 'fermata'].includes(G.state);
   if (!live) return;
   if (e.code === 'Space') {
     e.preventDefault();
